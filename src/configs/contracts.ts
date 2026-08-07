@@ -1,0 +1,2 @@
+export const SIGNATURE_GATEWAY =
+  "0xfbC184337Dc6595D8bf62968Bda46e7De7AF9c3d" as const

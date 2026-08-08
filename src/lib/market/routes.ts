@@ -267,9 +267,7 @@ export function buildDirectRouteLeg(match: Match, quote: BorrowQuote): SplitLeg 
 export function effectiveBorrowApyForLeg(leg: SplitLeg) {
   return effectiveBorrowApy({
     borrowReserve: leg.match.borrow,
-    collateralAmount: leg.collateralAmount,
     collateralReserve: leg.match.collateral,
-    debtAmount: leg.debtAmount,
   })
 }
 

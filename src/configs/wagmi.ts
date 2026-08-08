@@ -2,25 +2,24 @@ import { getDefaultConfig } from "connectkit"
 import { createConfig, http } from "wagmi"
 
 import { appChains, mainnetRpcUrl } from "@/configs/chains"
+import { walletConnect } from 'wagmi/connectors'
 
 const walletConnectProjectId =
   process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() ?? ""
-
+console.log("walletConnectProjectId", walletConnectProjectId)
 export function createWagmiConfig() {
-  const appUrl =
-    process.env.NEXT_PUBLIC_APP_URL?.trim() ??
-    (typeof window === "undefined"
-      ? "http://localhost:3000"
-      : window.location.origin)
+
 
   return createConfig(
     getDefaultConfig({
       appName: "Borrow Aggregator",
       appDescription: "Aave V4 reserves and spokes",
-      appUrl,
-      appIcon: `${appUrl}/favicon.ico`,
       walletConnectProjectId,
       chains: appChains,
+      connectors: [walletConnect({
+        projectId: walletConnectProjectId,
+        showQrModal: false,
+      })],
       transports: Object.fromEntries(
         appChains.map((chain) => [
           chain.id,
@@ -32,3 +31,5 @@ export function createWagmiConfig() {
     })
   )
 }
+
+export const wagmiConfig = createWagmiConfig()

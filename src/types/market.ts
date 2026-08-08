@@ -72,7 +72,7 @@ export type BorrowPreviewLeg = {
 export type BorrowApyBreakdown = {
   borrowApyLabel: string
   borrowSymbol: string
-  collateralDepositApyLabel: string
+  collateralApyLabel: string
   collateralSymbol: string
 }
 

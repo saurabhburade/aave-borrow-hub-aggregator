@@ -42,10 +42,23 @@ const SIGNATURE_ACTIONS: Array<{
   action: BorrowSigningAction
   label: string
 }> = [
-  { action: "pm-approval", label: "PM" },
-  { action: "supply", label: "Supply" },
-  { action: "collateral", label: "Collateral" },
-  { action: "borrow", label: "Borrow" },
+  {
+    action: "pm-approval",
+    label: "Enable Position Manager",
+
+  },
+  {
+    action: "supply",
+    label: "Supply Collateral",
+  },
+  {
+    action: "collateral",
+    label: "Enable Collateral",
+  },
+  {
+    action: "borrow",
+    label: "Borrow Asset",
+  },
 ]
 const MAINNET_EXPLORER_TX_BASE_URL =
   mainnet.blockExplorers.default.url.replace(/\/$/, "")
@@ -130,15 +143,17 @@ export function BorrowExecutionModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <div className="sticky top-0 flex items-center justify-between gap-4 border-b bg-card px-5 py-4">
+        <div className="sticky top-0 flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
           <div className="min-w-0">
-            <DialogTitle>Borrow preview</DialogTitle>
+            <DialogTitle className="text-base">
+              Borrow preview
+            </DialogTitle>
             <DialogDescription className="sr-only">
               Route preview and transaction status.
             </DialogDescription>
           </div>
-          <DialogClose>
-            <XIcon data-icon="inline-start" />
+          <DialogClose className="size-8 cursor-pointer">
+            <XIcon data-icon="inline-start" className="size-4" />
             <span className="sr-only">Close</span>
           </DialogClose>
         </div>
@@ -271,7 +286,7 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
         <div className="shrink-0 text-right">
           <InfoLabel
             className={MICRO_LABEL_CLASS}
-            tooltip={MARKET_TOOLTIPS.borrowApy}
+            tooltip={MARKET_TOOLTIPS.effectiveBorrowApy}
             tooltipClassName="mt-px"
           >
             Effective Borrow APY
@@ -401,14 +416,13 @@ function EffectiveBorrowApyTooltipContent({
         <span className="text-right font-medium text-popover-foreground">
           {breakdown.borrowApyLabel}
         </span>
-        <span>{breakdown.collateralSymbol} Deposit APY</span>
+        <span>{breakdown.collateralSymbol} Collateral APY</span>
         <span className="text-right font-medium text-popover-foreground">
-          {breakdown.collateralDepositApyLabel}
+          {breakdown.collateralApyLabel}
         </span>
       </span>
       <span className="text-[11px] leading-relaxed text-muted-foreground">
-        Net cost = Borrow APY − Deposit APY × collateral value ÷ borrowed
-        value.
+        Net cost = Borrow APY − Collateral APY.
       </span>
     </span>
   )
@@ -542,7 +556,12 @@ function SignatureStatusList({
   return (
     <div className="flex flex-col gap-3 rounded-2xl border p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className={MICRO_LABEL_CLASS}>Signature status</p>
+        <InfoLabel
+          className={MICRO_LABEL_CLASS}
+          tooltip={MARKET_TOOLTIPS.signatureStatus}
+        >
+          Signature status
+        </InfoLabel>
         <Badge variant="secondary">{preview.legs.length} spokes</Badge>
       </div>
 
@@ -581,7 +600,9 @@ function SignatureStatusPill({
 
   return (
     <span className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-card/60 px-2 py-1.5 text-[11px]">
-      <span className="truncate font-medium">{label}</span>
+      <span className="flex min-w-0 items-center gap-1">
+        <span className="truncate font-medium">{label}</span>
+      </span>
       <span
         aria-label={statusLabel}
         className={[

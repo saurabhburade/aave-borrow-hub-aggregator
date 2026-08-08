@@ -711,7 +711,7 @@ function RouteHeaderEffectiveApy({ value }: { value: string }) {
     <span className="shrink-0 text-right">
       <InfoLabel
         className={MICRO_LABEL_CLASS}
-        tooltip={MARKET_TOOLTIPS.borrowApy}
+        tooltip={MARKET_TOOLTIPS.effectiveBorrowApy}
         tooltipClassName="mt-px"
       >
         Effective Borrow APY
@@ -748,14 +748,13 @@ function EffectiveBorrowApyTooltipContent({ leg }: { leg: SplitLeg }) {
         <span className="text-right font-medium text-popover-foreground">
           {formatPercent(leg.match.borrow.summary.borrowApy)}
         </span>
-        <span>{collateralSymbol} Deposit APY</span>
+        <span>{collateralSymbol} Collateral APY</span>
         <span className="text-right font-medium text-popover-foreground">
           {formatPercent(leg.match.collateral.summary.supplyApy)}
         </span>
       </span>
       <span className="text-[11px] leading-relaxed text-muted-foreground">
-        Net cost = Borrow APY − Deposit APY × collateral value ÷ borrowed
-        value.
+        Net cost = Borrow APY − Collateral APY.
       </span>
     </span>
   )
@@ -790,7 +789,7 @@ function CompactRouteSummary({
         <InfoLabel
           className={cn(MICRO_LABEL_CLASS, "shrink-0")}
           nested
-          tooltip={MARKET_TOOLTIPS.borrowApy}
+          tooltip={MARKET_TOOLTIPS.effectiveBorrowApy}
           tooltipClassName="mt-px"
         >
           Effective Borrow APY

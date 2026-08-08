@@ -80,37 +80,16 @@ export function supplyApy(reserve: Reserve) {
 
 export function effectiveBorrowApy({
   borrowReserve,
-  collateralAmount,
   collateralReserve,
-  debtAmount,
 }: {
   borrowReserve: Reserve
-  collateralAmount: number
   collateralReserve: Reserve
-  debtAmount: number
 }) {
   const borrowApyValue = borrowApy(borrowReserve)
-  const collateralPrice = tokenPrice(collateralReserve)
-  const debtPrice = tokenPrice(borrowReserve)
 
-  if (
-    !Number.isFinite(borrowApyValue) ||
-    !collateralPrice ||
-    !debtPrice ||
-    collateralAmount <= 0 ||
-    debtAmount <= 0
-  ) {
-    return borrowApyValue
-  }
-
-  const debtValue = debtAmount * debtPrice
-  const collateralValue = collateralAmount * collateralPrice
-
-  if (debtValue <= 0 || collateralValue <= 0) {
-    return borrowApyValue
-  }
-
-  return borrowApyValue - supplyApy(collateralReserve) * (collateralValue / debtValue)
+  return Number.isFinite(borrowApyValue)
+    ? borrowApyValue - supplyApy(collateralReserve)
+    : borrowApyValue
 }
 
 export function tokenPrice(reserve: Reserve) {

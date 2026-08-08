@@ -135,7 +135,7 @@ function buildBorrowPreviewLeg(
     effectiveBorrowApyBreakdown: {
       borrowApyLabel: formatPercent(leg.match.borrow.summary.borrowApy),
       borrowSymbol: tokenSymbol(leg.match.borrow),
-      collateralDepositApyLabel: formatPercent(
+      collateralApyLabel: formatPercent(
         leg.match.collateral.summary.supplyApy
       ),
       collateralSymbol: tokenSymbol(leg.match.collateral),

@@ -9,10 +9,11 @@ import {
 } from "lucide-react"
 import { mainnet } from "viem/chains"
 
+import { Metric, SplitLegMetric } from "@/components/market/health-factor-card"
 import {
-  Metric,
-  SplitLegMetric,
-} from "@/components/market/health-factor-card"
+  EffectiveBorrowApyValue,
+  HubBadge,
+} from "@/components/market/route-presentation"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -25,17 +26,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { InfoLabel, InfoTooltip } from "@/components/ui/info-tooltip"
-import {
-  CAPTION_CLASS,
-  MICRO_LABEL_CLASS,
-} from "@/configs/constants"
+import { CAPTION_CLASS, MICRO_LABEL_CLASS } from "@/configs/constants"
 import { MARKET_TOOLTIPS } from "@/configs/tooltips"
-import { shortHash } from "@/lib/aave/utils"
 import type { BorrowExecutionStage } from "@/hooks/use-borrow-execution"
 import type {
   BorrowSigningAction,
   BorrowSigningStatus,
 } from "@/lib/aave/signature-gateway"
+import { shortHash } from "@/lib/aave/utils"
 import type { BorrowPreview } from "@/types/market"
 
 const SIGNATURE_ACTIONS: Array<{
@@ -45,7 +43,6 @@ const SIGNATURE_ACTIONS: Array<{
   {
     action: "pm-approval",
     label: "Enable Position Manager",
-
   },
   {
     action: "supply",
@@ -60,8 +57,10 @@ const SIGNATURE_ACTIONS: Array<{
     label: "Borrow Asset",
   },
 ]
-const MAINNET_EXPLORER_TX_BASE_URL =
-  mainnet.blockExplorers.default.url.replace(/\/$/, "")
+const MAINNET_EXPLORER_TX_BASE_URL = mainnet.blockExplorers.default.url.replace(
+  /\/$/,
+  ""
+)
 
 export function RouteExecutionPanel({
   disabled,
@@ -145,9 +144,7 @@ export function BorrowExecutionModal({
       <DialogContent>
         <div className="sticky top-0 flex items-center justify-between gap-4 border-b bg-card px-5 py-3">
           <div className="min-w-0">
-            <DialogTitle className="text-base">
-              Borrow preview
-            </DialogTitle>
+            <DialogTitle className="text-base">Borrow preview</DialogTitle>
             <DialogDescription className="sr-only">
               Route preview and transaction status.
             </DialogDescription>
@@ -193,10 +190,7 @@ export function BorrowExecutionModal({
               ) : null}
 
               {txHash ? (
-                <TransactionHashRow
-                  hash={String(txHash)}
-                  label="Transaction"
-                />
+                <TransactionHashRow hash={String(txHash)} label="Transaction" />
               ) : null}
 
               <Button
@@ -229,13 +223,7 @@ export function BorrowExecutionModal({
   )
 }
 
-function TransactionHashRow({
-  hash,
-  label,
-}: {
-  hash: string
-  label: string
-}) {
+function TransactionHashRow({ hash, label }: { hash: string; label: string }) {
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
@@ -260,7 +248,7 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
   const legBreakdown = preview.mode === "split" ? preview.legs : []
   const headerApyValue = directLeg ? (
     <EffectiveBorrowApyValue
-      breakdown={directLeg.effectiveBorrowApyBreakdown}
+      details={directLeg.effectiveBorrowApyBreakdown}
       value={preview.effectiveBorrowApyLabel}
     />
   ) : (
@@ -291,9 +279,7 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
           >
             Effective Borrow APY
           </InfoLabel>
-          <p className="text-[13px] font-semibold">
-            {headerApyValue}
-          </p>
+          <p className="text-[13px] font-semibold">{headerApyValue}</p>
         </div>
       </div>
 
@@ -313,7 +299,7 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
               label="Effective Borrow APY"
               value={
                 <EffectiveBorrowApyValue
-                  breakdown={directLeg.effectiveBorrowApyBreakdown}
+                  details={directLeg.effectiveBorrowApyBreakdown}
                   value={directLeg.effectiveBorrowApyLabel}
                 />
               }
@@ -357,7 +343,7 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
                   label="Effective Borrow APY"
                   value={
                     <EffectiveBorrowApyValue
-                      breakdown={leg.effectiveBorrowApyBreakdown}
+                      details={leg.effectiveBorrowApyBreakdown}
                       value={leg.effectiveBorrowApyLabel}
                     />
                   }
@@ -372,71 +358,6 @@ function BorrowPreviewPanel({ preview }: { preview: BorrowPreview }) {
         </div>
       ) : null}
     </div>
-  )
-}
-
-function EffectiveBorrowApyValue({
-  breakdown,
-  value,
-}: {
-  breakdown: BorrowPreview["legs"][number]["effectiveBorrowApyBreakdown"]
-  value: string
-}) {
-  return (
-    <span className="inline-flex min-w-0 items-center gap-1">
-      <span className="truncate">{value}</span>
-      <InfoTooltip
-        className="size-3.5 [&_svg]:size-3"
-        content={
-          <EffectiveBorrowApyTooltipContent
-            breakdown={breakdown}
-            value={value}
-          />
-        }
-        label="Effective borrow APY details"
-      />
-    </span>
-  )
-}
-
-function EffectiveBorrowApyTooltipContent({
-  breakdown,
-  value,
-}: {
-  breakdown: BorrowPreview["legs"][number]["effectiveBorrowApyBreakdown"]
-  value: string
-}) {
-  return (
-    <span className="flex w-56 flex-col gap-2">
-      <span className="text-[13px] font-semibold text-popover-foreground">
-        Effective Borrow APY {value}
-      </span>
-      <span className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
-        <span>{breakdown.borrowSymbol} Borrow APY</span>
-        <span className="text-right font-medium text-popover-foreground">
-          {breakdown.borrowApyLabel}
-        </span>
-        <span>{breakdown.collateralSymbol} Collateral APY</span>
-        <span className="text-right font-medium text-popover-foreground">
-          {breakdown.collateralApyLabel}
-        </span>
-      </span>
-      <span className="text-[11px] leading-relaxed text-muted-foreground">
-        Net cost = Borrow APY − Collateral APY.
-      </span>
-    </span>
-  )
-}
-
-function HubBadge({ label }: { label: string }) {
-  return (
-    <Badge
-      variant="outline"
-      className="max-w-40 shrink px-1.5"
-      title={label}
-    >
-      <span className="min-w-0 truncate">{label}</span>
-    </Badge>
   )
 }
 
@@ -473,9 +394,7 @@ function BorrowTransactionSteps({
       <div className="flex items-center justify-between gap-3">
         <p className={MICRO_LABEL_CLASS}>Transaction state</p>
         <Badge variant="secondary">
-          {stage === "submitted" && txHash
-            ? "Submitted"
-            : statusLabel(stage)}
+          {stage === "submitted" && txHash ? "Submitted" : statusLabel(stage)}
         </Badge>
       </div>
 
@@ -519,7 +438,8 @@ function TransactionStep({
           status === "active" &&
             !isProcessing &&
             "border-ring bg-secondary text-secondary-foreground",
-          status === "error" && "border-destructive bg-destructive/10 text-destructive",
+          status === "error" &&
+            "border-destructive bg-destructive/10 text-destructive",
           status === "pending" && "border-border text-muted-foreground",
         ]
           .filter(Boolean)
@@ -604,7 +524,6 @@ function SignatureStatusPill({
         <span className="truncate font-medium">{label}</span>
       </span>
       <span
-        aria-label={statusLabel}
         className={[
           "flex shrink-0 items-center justify-center",
           status === "skipped" ? "gap-1" : "size-4",
@@ -614,6 +533,7 @@ function SignatureStatusPill({
           .join(" ")}
         title={statusLabel}
       >
+        <span className="sr-only">{statusLabel}</span>
         {status === "signing" ? (
           <LoaderCircleIcon
             aria-hidden="true"
@@ -655,7 +575,9 @@ function SignatureStatusPill({
   )
 }
 
-function signatureStatusLabel(status: BorrowSigningStatus["status"] | "pending") {
+function signatureStatusLabel(
+  status: BorrowSigningStatus["status"] | "pending"
+) {
   switch (status) {
     case "signing":
       return "Signing"

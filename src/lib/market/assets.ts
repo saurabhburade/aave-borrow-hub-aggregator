@@ -6,7 +6,7 @@ import type {
 } from "@aave/react"
 import type { Address } from "viem"
 
-import { toNumber, tokenKey } from "@/lib/aave/utils"
+import { tokenKey, toNumber } from "@/lib/aave/utils"
 import type { AssetOption } from "@/types/market"
 
 export function uniqueAssets(reserves: Reserve[]) {
@@ -81,7 +81,11 @@ export function mapDebtAmountsByReserve(borrows: UserBorrowItem[]) {
   const amountsByReserve = new Map<string, number>()
 
   for (const borrow of borrows) {
-    addReserveAmount(amountsByReserve, borrow.reserve, tokenAmountValue(borrow.debt))
+    addReserveAmount(
+      amountsByReserve,
+      borrow.reserve,
+      tokenAmountValue(borrow.debt)
+    )
   }
 
   return amountsByReserve

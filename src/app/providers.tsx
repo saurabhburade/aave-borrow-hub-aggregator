@@ -8,14 +8,14 @@ import { WagmiProvider } from "wagmi"
 
 import { aaveClient } from "@/configs/constants"
 import { createWagmiConfig } from "@/configs/wagmi"
-import { wagmiConfig } from "@/configs/wagmi"
 
 const queryClient = new QueryClient()
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [wagmiConfig] = React.useState(createWagmiConfig)
 
   return (
-    <WagmiProvider config={wagmiConfig }>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <ConnectKitProvider>
           <AaveProvider client={aaveClient}>{children}</AaveProvider>

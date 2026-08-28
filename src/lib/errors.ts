@@ -11,11 +11,17 @@ const WALLET_REJECTION_PATTERNS = [
 export function formatBorrowErrorMessage(error: unknown) {
   const searchText = errorSearchText(error)
 
-  if (hasErrorCode(error, 4001) || includesAny(searchText, WALLET_REJECTION_PATTERNS)) {
+  if (
+    hasErrorCode(error, 4001) ||
+    includesAny(searchText, WALLET_REJECTION_PATTERNS)
+  ) {
     return "You rejected the request in your wallet."
   }
 
-  if (searchText.includes("InvalidSignature") || searchText.includes("0x8baa579f")) {
+  if (
+    searchText.includes("InvalidSignature") ||
+    searchText.includes("0x8baa579f")
+  ) {
     return "Invalid signature. Reopen the preview and sign again."
   }
 

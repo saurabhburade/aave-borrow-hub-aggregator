@@ -1,7 +1,7 @@
 import {
+  type Address,
   bytesToHex,
   encodeFunctionData,
-  type Address,
   type Hex,
   type PublicClient,
   type WalletClient,
@@ -239,11 +239,7 @@ export async function encodeSignedBorrowLegs({
       legIndex,
       onSigningStatus,
       publicClient,
-      resumeStatus: findSigningStatus(
-        resumeStatuses,
-        legIndex,
-        "pm-approval"
-      ),
+      resumeStatus: findSigningStatus(resumeStatuses, legIndex, "pm-approval"),
       spoke: leg.spoke,
       user,
       walletClient,

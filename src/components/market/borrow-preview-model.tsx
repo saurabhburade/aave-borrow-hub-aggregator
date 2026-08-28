@@ -8,7 +8,11 @@ import {
   formatLtvMetric,
   formatTokenAmountLabel,
 } from "@/components/market/route-metrics"
-import { formatPercent, formatPercentValue, tokenSymbol } from "@/lib/aave/utils"
+import {
+  formatPercent,
+  formatPercentValue,
+  tokenSymbol,
+} from "@/lib/aave/utils"
 import {
   buildDirectRouteLeg,
   estimatePositionImpact,
@@ -107,7 +111,9 @@ export function buildBorrowPreview({
       quote.healthFactor ?? healthFactorTarget
     ),
     hubLabel: matchHubLabel(selectedMatch),
-    legs: [buildBorrowPreviewLeg(routeLeg, healthFactorTarget, positionsBySpoke)],
+    legs: [
+      buildBorrowPreviewLeg(routeLeg, healthFactorTarget, positionsBySpoke),
+    ],
     mode,
     title: selectedMatch.borrow.spoke.name,
   }
@@ -135,9 +141,7 @@ function buildBorrowPreviewLeg(
     effectiveBorrowApyBreakdown: {
       borrowApyLabel: formatPercent(leg.match.borrow.summary.borrowApy),
       borrowSymbol: tokenSymbol(leg.match.borrow),
-      collateralApyLabel: formatPercent(
-        leg.match.collateral.summary.supplyApy
-      ),
+      collateralApyLabel: formatPercent(leg.match.collateral.summary.supplyApy),
       collateralSymbol: tokenSymbol(leg.match.collateral),
     },
     effectiveBorrowApyLabel: formatEffectiveBorrowApy(leg),

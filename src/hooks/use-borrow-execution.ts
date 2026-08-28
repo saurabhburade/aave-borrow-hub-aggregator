@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { type Address, type Hash, type Hex, type PublicClient } from "viem"
+import type { Address, Hash, Hex, PublicClient } from "viem"
 import { mainnet } from "viem/chains"
 import {
   useAccount,
@@ -11,17 +11,13 @@ import {
 } from "wagmi"
 
 import { erc20Abi, signatureGatewayAbi } from "@/configs/abis"
+import { SIGNATURE_GATEWAY } from "@/configs/contracts"
 import {
-  getCollateralApprovalMode,
-  type ApprovalMode,
-} from "@/hooks/use-approval-detection"
-import {
-  createBorrowActionKey,
-  encodeSignedBorrowLegs,
   type BorrowLeg,
   type BorrowSigningStatus,
+  createBorrowActionKey,
+  encodeSignedBorrowLegs,
 } from "@/lib/aave/signature-gateway"
-import { SIGNATURE_GATEWAY } from "@/configs/contracts"
 import { formatBorrowErrorMessage } from "@/lib/errors"
 
 type ExecutionState = {
@@ -36,11 +32,18 @@ type ExecutionState = {
 
 type SplitExecutionCache = {
   actionKey: bigint
+  chainId: number
   calls: Hex[]
   complete: boolean
   deadline: bigint
   legsKey: string
+  signer: Address
   signatureStatuses: BorrowSigningStatus[]
+}
+
+type CacheScope = {
+  chainId?: number
+  signer?: Address
 }
 
 export type BorrowExecutionStage =
@@ -65,7 +68,7 @@ const idleExecutionState: ExecutionState = {
 }
 
 export function useBorrowExecution() {
-  const { address: user } = useAccount()
+  const { address: user, chainId } = useAccount()
   const { data: walletClient } = useWalletClient()
   const publicClient = usePublicClient({ chainId: mainnet.id })
   const { switchChainAsync } = useSwitchChain()
@@ -76,6 +79,18 @@ export function useBorrowExecution() {
   React.useEffect(() => {
     stateRef.current = state
   }, [state])
+
+  React.useEffect(() => {
+    if (
+      splitExecutionCacheRef.current &&
+      !isCacheForSignerAndChain(splitExecutionCacheRef.current, {
+        chainId,
+        signer: user,
+      })
+    ) {
+      splitExecutionCacheRef.current = null
+    }
+  }, [chainId, user])
 
   const resetExecution = React.useCallback(() => {
     splitExecutionCacheRef.current = null
@@ -105,12 +120,14 @@ export function useBorrowExecution() {
         previousState.stage === "error" ? previousState.failedStage : null
       const legsKey = splitLegsKey(legs)
       const cachedExecution = splitExecutionCacheRef.current
+      const cacheScope = { chainId, signer: user as Address }
       const canResumeSigning =
         cachedExecution !== null &&
         canResumeCachedSigning({
           cache: cachedExecution,
           failedStage,
           legsKey,
+          scope: cacheScope,
         })
       const canResumeExecution =
         cachedExecution !== null &&
@@ -118,6 +135,7 @@ export function useBorrowExecution() {
           cache: cachedExecution,
           failedStage,
           legsKey,
+          scope: cacheScope,
         })
 
       setState({
@@ -181,8 +199,11 @@ export function useBorrowExecution() {
           }
         }
 
-        if (canResumeExecution && cachedExecution) {
-          if (failedStage === "simulating") {
+        const submitBorrowMulticall = async (
+          calls: Hex[],
+          simulate: boolean
+        ) => {
+          if (simulate) {
             setState((current) => ({
               ...current,
               error: null,
@@ -196,7 +217,7 @@ export function useBorrowExecution() {
               address: SIGNATURE_GATEWAY,
               abi: signatureGatewayAbi,
               functionName: "multicall",
-              args: [cachedExecution.calls],
+              args: [calls],
             })
           }
 
@@ -214,7 +235,7 @@ export function useBorrowExecution() {
             address: SIGNATURE_GATEWAY,
             abi: signatureGatewayAbi,
             functionName: "multicall",
-            args: [cachedExecution.calls],
+            args: [calls],
           })
 
           splitExecutionCacheRef.current = null
@@ -230,7 +251,6 @@ export function useBorrowExecution() {
           const receipt = await publicClient.waitForTransactionReceipt({
             hash: txHash,
           })
-
           if (receipt.status === "reverted") {
             throw new Error("Borrow transaction reverted")
           }
@@ -247,6 +267,13 @@ export function useBorrowExecution() {
           return txHash
         }
 
+        if (canResumeExecution && cachedExecution) {
+          return await submitBorrowMulticall(
+            cachedExecution.calls,
+            failedStage === "simulating"
+          )
+        }
+
         const signingCache = canResumeSigning ? cachedExecution : null
         const deadline =
           signingCache?.deadline ??
@@ -256,10 +283,12 @@ export function useBorrowExecution() {
 
         const activeSigningCache = {
           actionKey,
+          chainId: mainnet.id,
           calls: [...(signingCache?.calls ?? [])],
           complete: false,
           deadline,
           legsKey,
+          signer: user as Address,
           signatureStatuses: resumeStatuses,
         }
         splitExecutionCacheRef.current = activeSigningCache
@@ -304,75 +333,17 @@ export function useBorrowExecution() {
         })
         splitExecutionCacheRef.current = {
           actionKey,
+          chainId: mainnet.id,
           calls,
           complete: true,
           deadline,
           legsKey,
+          signer: user as Address,
           signatureStatuses:
             splitExecutionCacheRef.current?.signatureStatuses ?? [],
         }
 
-        setState((current) => ({
-          ...current,
-          error: null,
-          failedStage: null,
-          loading: true,
-          stage: "simulating",
-          txHash: null,
-        }))
-        await publicClient.simulateContract({
-          account: user,
-          address: SIGNATURE_GATEWAY,
-          abi: signatureGatewayAbi,
-          functionName: "multicall",
-          args: [calls],
-        })
-
-        setState((current) => ({
-          ...current,
-          error: null,
-          failedStage: null,
-          loading: true,
-          stage: "confirming",
-          txHash: null,
-        }))
-        const txHash = await walletClient.writeContract({
-          account: user,
-          chain: mainnet,
-          address: SIGNATURE_GATEWAY,
-          abi: signatureGatewayAbi,
-          functionName: "multicall",
-          args: [calls],
-        })
-
-        splitExecutionCacheRef.current = null
-        setState((current) => ({
-          ...current,
-          error: null,
-          failedStage: null,
-          loading: true,
-          stage: "submitted",
-          txHash,
-        }))
-
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: txHash,
-        })
-
-        if (receipt.status === "reverted") {
-          throw new Error("Borrow transaction reverted")
-        }
-
-        setState((current) => ({
-          ...current,
-          error: null,
-          failedStage: null,
-          loading: false,
-          stage: "confirmed",
-          txHash,
-        }))
-
-        return txHash
+        return await submitBorrowMulticall(calls, true)
       } catch (error) {
         const message = formatBorrowErrorMessage(error)
         setState((current) => {
@@ -402,7 +373,7 @@ export function useBorrowExecution() {
         throw error
       }
     },
-    [publicClient, switchChainAsync, user, walletClient]
+    [chainId, publicClient, switchChainAsync, user, walletClient]
   )
 
   return {
@@ -486,7 +457,6 @@ function rejectSigningStatuses(
 
 type CollateralApproval = {
   amount: bigint
-  mode: Exclude<ApprovalMode, "allowance-ok">
   token: Address
 }
 
@@ -519,19 +489,15 @@ async function missingCollateralApprovals({
   const approvals: CollateralApproval[] = []
 
   for (const approval of required.values()) {
-    const result = await getCollateralApprovalMode({
-      publicClient,
-      requiredAmount: approval.amount,
-      spender: SIGNATURE_GATEWAY,
-      token: approval.token,
-      user,
+    const allowance = await publicClient.readContract({
+      address: approval.token,
+      abi: erc20Abi,
+      functionName: "allowance",
+      args: [user, SIGNATURE_GATEWAY],
     })
 
-    if (result.mode !== "allowance-ok") {
-      approvals.push({
-        ...approval,
-        mode: result.mode,
-      })
+    if (allowance < approval.amount) {
+      approvals.push(approval)
     }
   }
 
@@ -553,18 +519,31 @@ function splitLegsKey(legs: BorrowLeg[]) {
     .join("|")
 }
 
-function canResumeCachedMulticall({
+export function isCacheForSignerAndChain(
+  cache: Pick<SplitExecutionCache, "chainId" | "signer">,
+  scope: CacheScope
+) {
+  return (
+    cache.chainId === scope.chainId &&
+    cache.signer.toLowerCase() === scope.signer?.toLowerCase()
+  )
+}
+
+export function canResumeCachedMulticall({
   cache,
   failedStage,
   legsKey,
+  scope,
 }: {
   cache: SplitExecutionCache
   failedStage: BorrowExecutionStage | null
   legsKey: string
+  scope: CacheScope
 }) {
   if (
     !cache.complete ||
     cache.legsKey !== legsKey ||
+    !isCacheForSignerAndChain(cache, scope) ||
     (failedStage !== "simulating" && failedStage !== "confirming")
   ) {
     return false
@@ -575,16 +554,23 @@ function canResumeCachedMulticall({
   return cache.deadline > minimumDeadline
 }
 
-function canResumeCachedSigning({
+export function canResumeCachedSigning({
   cache,
   failedStage,
   legsKey,
+  scope,
 }: {
   cache: SplitExecutionCache
   failedStage: BorrowExecutionStage | null
   legsKey: string
+  scope: CacheScope
 }) {
-  if (cache.complete || cache.legsKey !== legsKey || failedStage !== "signing") {
+  if (
+    cache.complete ||
+    cache.legsKey !== legsKey ||
+    !isCacheForSignerAndChain(cache, scope) ||
+    failedStage !== "signing"
+  ) {
     return false
   }
 

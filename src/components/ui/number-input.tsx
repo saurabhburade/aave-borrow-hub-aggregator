@@ -1,4 +1,4 @@
-import * as React from "react"
+import type * as React from "react"
 
 import { Input } from "@/components/ui/input"
 
@@ -41,4 +41,4 @@ function NumberInput({
   )
 }
 
-export { NumberInput, normalizeNumberInputValue }
+export { NumberInput }

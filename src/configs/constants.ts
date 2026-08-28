@@ -14,9 +14,6 @@ export const MAX_HEALTH_FACTOR = 10
 export const HEALTH_FACTOR_ERROR_THRESHOLD = 1.1
 export const HEALTH_FACTOR_WARNING_THRESHOLD = 1.51
 
-/** @deprecated Collateral balance slider is hidden until the UX is revisited. */
-export const ENABLE_DEPRECATED_COLLATERAL_BALANCE_SLIDER = false
-
 export const MICRO_LABEL_CLASS =
   "text-[11px] font-semibold text-muted-foreground"
 export const CAPTION_CLASS = "text-[11px] font-medium text-muted-foreground"

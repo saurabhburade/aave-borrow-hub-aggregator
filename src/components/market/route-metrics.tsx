@@ -80,7 +80,7 @@ export function formatHealthFactorMetric(
       <HealthFactorValue
         value={
           leg
-            ? splitLegHealthFactor(leg) ?? healthFactorTarget
+            ? (splitLegHealthFactor(leg) ?? healthFactorTarget)
             : healthFactorTarget
         }
       />
@@ -145,10 +145,7 @@ export function formatLiquidationPriceMetric(
   )
 }
 
-function formatMetricTransition(
-  current: ReactNode,
-  next: ReactNode
-) {
+function formatMetricTransition(current: ReactNode, next: ReactNode) {
   if (current === "-" && next === "-") {
     return "-"
   }

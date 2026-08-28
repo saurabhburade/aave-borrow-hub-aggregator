@@ -71,7 +71,9 @@ export function tokenKey(reserve: Reserve) {
 }
 
 export function borrowApy(reserve: Reserve) {
-  return toNumber(reserve.summary.borrowApy.normalized) ?? Number.POSITIVE_INFINITY
+  return (
+    toNumber(reserve.summary.borrowApy.normalized) ?? Number.POSITIVE_INFINITY
+  )
 }
 
 export function supplyApy(reserve: Reserve) {
@@ -107,7 +109,10 @@ export function tokenDecimals(reserve: Reserve) {
   return reserve.summary.supplied.token.info.decimals
 }
 
-export function percentRatio(percent: { normalized?: unknown; value?: unknown }) {
+export function percentRatio(percent: {
+  normalized?: unknown
+  value?: unknown
+}) {
   const value = toNumber(percent.normalized ?? percent.value) ?? 0
   return value > 1 ? value / 100 : value
 }
@@ -135,11 +140,7 @@ export function aggregateLiquidationPrice({
   collateralPrice: number
   debtValue: number
 }) {
-  if (
-    adjustedCollateralValue <= 0 ||
-    collateralPrice <= 0 ||
-    debtValue <= 0
-  ) {
+  if (adjustedCollateralValue <= 0 || collateralPrice <= 0 || debtValue <= 0) {
     return null
   }
 

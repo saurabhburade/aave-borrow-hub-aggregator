@@ -12,12 +12,11 @@ import {
   useUserPositions,
   useUserSupplies,
 } from "@aave/react"
-import * as React from "react"
 import { useQueryClient } from "@tanstack/react-query"
+import * as React from "react"
 import { useAccount, useBalance } from "wagmi"
-
-import { buildBorrowPreview } from "@/components/market/borrow-preview-model"
 import { BorrowCard } from "@/components/market/borrow-card"
+import { buildBorrowPreview } from "@/components/market/borrow-preview-model"
 import {
   CollateralBalanceAlert,
   CollateralHealthFactorAlert,
@@ -26,20 +25,16 @@ import {
   BorrowExecutionModal,
   RouteExecutionPanel,
 } from "@/components/market/execution-preview"
-import {
-  MatchSummary,
-  RouteSortTabs,
-} from "@/components/market/route-list"
-import { ConnectWalletButton } from "@/components/wallet/connect-wallet-button"
+import { MatchSummary, RouteSortTabs } from "@/components/market/route-list"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { InfoLabel } from "@/components/ui/info-tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ConnectWalletButton } from "@/components/wallet/connect-wallet-button"
 import {
   DEFAULT_COLLATERAL_SYMBOL,
   DEFAULT_DEBT_SYMBOL,
   DEFAULT_HEALTH_FACTOR,
-  ENABLE_DEPRECATED_COLLATERAL_BALANCE_SLIDER,
   SPLIT_ROUTE_ID,
   ZERO_EVM_ADDRESS,
 } from "@/configs/constants"
@@ -51,6 +46,13 @@ import {
   tokenKey,
   tokenSymbol,
 } from "@/lib/aave/utils"
+import {
+  mapCollateralAmountsByReserve,
+  mapDebtAmountsByReserve,
+  mapPositionsBySpoke,
+  preferredAssetKey,
+  uniqueAssets,
+} from "@/lib/market/assets"
 import {
   formatBalanceLabel,
   formatCollateralBalanceError,
@@ -70,13 +72,6 @@ import {
   sortMatches,
   splitLegHealthFactor,
 } from "@/lib/market/routes"
-import {
-  mapCollateralAmountsByReserve,
-  mapDebtAmountsByReserve,
-  mapPositionsBySpoke,
-  preferredAssetKey,
-  uniqueAssets,
-} from "@/lib/market/assets"
 import type {
   LastEditedAmount,
   RouteExecutionMode,
@@ -93,8 +88,9 @@ export function AaveMarketDashboard() {
   const [collateralAssetKey, setCollateralAssetKey] = React.useState("")
   const [debtAmount, setDebtAmount] = React.useState("")
   const [collateralAmount, setCollateralAmount] = React.useState("")
-  const [healthFactorTarget, setHealthFactorTarget] =
-    React.useState(DEFAULT_HEALTH_FACTOR)
+  const [healthFactorTarget, setHealthFactorTarget] = React.useState(
+    DEFAULT_HEALTH_FACTOR
+  )
   const [selectedRouteId, setSelectedRouteId] = React.useState("")
   const [routeSort, setRouteSort] = React.useState<RouteSortMode>("apr")
   const [displayedRouteSort, setDisplayedRouteSort] =
@@ -195,21 +191,12 @@ export function AaveMarketDashboard() {
       !userSupplies.error &&
       !userBorrows.error)
   const debtAssets = React.useMemo(
-    () =>
-      uniqueAssets(
-        reserveList.filter(
-          (reserve) => reserve.canBorrow || reserve.settings.borrowable
-        )
-      ),
+    () => uniqueAssets(reserveList.filter((reserve) => reserve.canBorrow)),
     [reserveList]
   )
   const collateralAssets = React.useMemo(
     () =>
-      uniqueAssets(
-        reserveList.filter(
-          (reserve) => reserve.canUseAsCollateral || reserve.settings.collateral
-        )
-      ),
+      uniqueAssets(reserveList.filter((reserve) => reserve.canUseAsCollateral)),
     [reserveList]
   )
 
@@ -223,8 +210,7 @@ export function AaveMarketDashboard() {
     [debtAssets, selectedDebtKey]
   )
   const selectedCollateralAsset = React.useMemo(
-    () =>
-      collateralAssets.find((asset) => asset.key === selectedCollateralKey),
+    () => collateralAssets.find((asset) => asset.key === selectedCollateralKey),
     [collateralAssets, selectedCollateralKey]
   )
   const selectedDebtReserve = React.useMemo(
@@ -233,7 +219,9 @@ export function AaveMarketDashboard() {
   )
   const selectedCollateralReserve = React.useMemo(
     () =>
-      reserveList.find((reserve) => tokenKey(reserve) === selectedCollateralKey),
+      reserveList.find(
+        (reserve) => tokenKey(reserve) === selectedCollateralKey
+      ),
     [reserveList, selectedCollateralKey]
   )
   const debtBalance = useBalance({
@@ -320,7 +308,7 @@ export function AaveMarketDashboard() {
       ? SPLIT_ROUTE_ID
       : matchedSpokes.some((match) => match.spokeId === selectedRouteId)
         ? selectedRouteId
-        : matchedSpokes[0]?.spokeId ?? ""
+        : (matchedSpokes[0]?.spokeId ?? "")
   const selectedMatch =
     activeRouteId === SPLIT_ROUTE_ID
       ? undefined
@@ -335,7 +323,8 @@ export function AaveMarketDashboard() {
       )
     : null
   const error = chains.error ?? reserves.error
-  const loading = chains.loading || (reserves.loading && reserveList.length === 0)
+  const loading =
+    chains.loading || (reserves.loading && reserveList.length === 0)
   const routeSorting = hasAmount && displayedRouteSort !== routeSort
   const showEligibleSpokesSkeleton = loading || routeSorting
   const routeMode = activeRouteId === SPLIT_ROUTE_ID ? "split" : "direct"
@@ -343,8 +332,8 @@ export function AaveMarketDashboard() {
   const estimatedCollateralAmount =
     lastEdited === "debt"
       ? routeMode === "split"
-        ? splitRoute?.collateralAmount ?? null
-        : quote?.collateralAmount ?? null
+        ? (splitRoute?.collateralAmount ?? null)
+        : (quote?.collateralAmount ?? null)
       : null
   const displayedCollateralAmount =
     estimatedCollateralAmount && estimatedCollateralAmount > 0
@@ -355,8 +344,8 @@ export function AaveMarketDashboard() {
   )
   const requiredCollateralAmount =
     routeMode === "split"
-      ? splitRoute?.collateralAmount ?? displayedCollateralNumericAmount
-      : quote?.collateralAmount ?? displayedCollateralNumericAmount
+      ? (splitRoute?.collateralAmount ?? displayedCollateralNumericAmount)
+      : (quote?.collateralAmount ?? displayedCollateralNumericAmount)
   const collateralBalanceAmount = collateralBalance.data
     ? parseInputAmount(collateralBalance.data.formatted)
     : null
@@ -365,7 +354,7 @@ export function AaveMarketDashboard() {
     selectedCollateralAsset?.balanceSymbol ??
     (selectedCollateralReserve ? tokenSymbol(selectedCollateralReserve) : "")
   const collateralBalanceError =
-    Boolean(address) &&
+    address &&
     collateralBalanceAmount !== null &&
     !collateralBalance.error &&
     requiredCollateralAmount > collateralBalanceAmount
@@ -419,14 +408,7 @@ export function AaveMarketDashboard() {
         scopeLabel: selectedMatch.borrow.spoke.name,
       },
     ]
-  }, [
-    hasAmount,
-    positionsBySpoke,
-    quote,
-    routeMode,
-    selectedMatch,
-    splitRoute,
-  ])
+  }, [hasAmount, positionsBySpoke, quote, routeMode, selectedMatch, splitRoute])
   const healthFactorReductionAlert = formatHealthFactorReductionAlert(
     selectedHealthFactorImpacts
   )
@@ -591,25 +573,6 @@ export function AaveMarketDashboard() {
                   setLastEdited("collateral")
                 },
               }}
-              collateralBalanceControl={
-                ENABLE_DEPRECATED_COLLATERAL_BALANCE_SLIDER
-                  ? {
-                      amount: displayedCollateralAmount,
-                      balanceAmount: collateralBalanceAmount,
-                      balanceSymbol: collateralBalanceSymbol,
-                      failed: Boolean(collateralBalance.error),
-                      loading:
-                        collateralBalance.isFetching &&
-                        !collateralBalance.data &&
-                        !collateralBalance.error,
-                      connected: Boolean(address),
-                      onChange: (value) => {
-                        setCollateralAmount(value)
-                        setLastEdited("collateral")
-                      },
-                    }
-                  : null
-              }
             />
 
             {!loading && hasAmount ? (

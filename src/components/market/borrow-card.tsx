@@ -9,10 +9,6 @@ import {
 } from "lucide-react"
 import * as React from "react"
 
-import {
-  CollateralBalanceControl,
-  type CollateralBalanceControlProps,
-} from "@/components/market/collateral-card"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import {
@@ -58,14 +54,12 @@ export type AssetAmountPanelProps = {
 
 export function BorrowCard({
   collateral,
-  collateralBalanceControl,
   debt,
   healthFactorTarget,
   loading,
   onHealthFactorTargetChange,
 }: {
   collateral: AssetAmountPanelProps
-  collateralBalanceControl: CollateralBalanceControlProps | null
   debt: AssetAmountPanelProps
   healthFactorTarget: number
   loading: boolean
@@ -117,10 +111,6 @@ export function BorrowCard({
             </div>
 
             <AssetAmountPanel {...collateral} />
-
-            {collateralBalanceControl ? (
-              <CollateralBalanceControl {...collateralBalanceControl} />
-            ) : null}
           </>
         )}
       </CardContent>
@@ -427,11 +417,7 @@ function AssetSelect({
         onClick={() => handleOpenChange(true)}
         className="h-10 max-w-48 justify-start overflow-hidden rounded-2xl px-3 text-sm font-semibold"
       >
-        {selectedAsset ? (
-          <AssetOptionLabel asset={selectedAsset} />
-        ) : (
-          "Asset"
-        )}
+        {selectedAsset ? <AssetOptionLabel asset={selectedAsset} /> : "Asset"}
       </Button>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>

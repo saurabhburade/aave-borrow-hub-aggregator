@@ -1,9 +1,9 @@
 "use client"
 
 import { InfoIcon } from "lucide-react"
+import type { ReactNode } from "react"
 import * as React from "react"
 import { createPortal } from "react-dom"
-import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -101,6 +101,7 @@ export function InfoTooltip({
   }, [open, updatePosition])
 
   return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: Hover is supplementary; keyboard focus remains on the non-nested trigger button.
     <span
       className="inline-flex"
       onMouseEnter={openTooltip}

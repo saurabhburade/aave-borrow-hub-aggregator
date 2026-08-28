@@ -1,7 +1,7 @@
 "use client"
 
-import { Accordion } from "@base-ui/react/accordion"
 import type { UserPosition } from "@aave/react"
+import { Accordion } from "@base-ui/react/accordion"
 import type { ReactNode } from "react"
 
 import {
@@ -17,12 +17,12 @@ import {
   formatLtvMetric,
   formatTokenMetricTransition,
 } from "@/components/market/route-metrics"
-import { Badge } from "@/components/ui/badge"
-import { InfoLabel, InfoTooltip } from "@/components/ui/info-tooltip"
 import {
-  MICRO_LABEL_CLASS,
-  SPLIT_ROUTE_ID,
-} from "@/configs/constants"
+  EffectiveBorrowApyValue as EffectiveBorrowApyPresentation,
+  HubBadge,
+} from "@/components/market/route-presentation"
+import { InfoLabel, InfoTooltip } from "@/components/ui/info-tooltip"
+import { MICRO_LABEL_CLASS, SPLIT_ROUTE_ID } from "@/configs/constants"
 import { MARKET_TOOLTIPS, tooltipForMarketMetric } from "@/configs/tooltips"
 import {
   borrowApy,
@@ -33,7 +33,6 @@ import {
   tokenSymbol,
 } from "@/lib/aave/utils"
 import { reserveKey } from "@/lib/market/assets"
-import { cn } from "@/lib/utils"
 import {
   buildDirectRouteLeg,
   effectiveBorrowApyForLeg,
@@ -44,6 +43,7 @@ import {
   matchHubLabel,
   splitRouteHubLabel,
 } from "@/lib/market/routes"
+import { cn } from "@/lib/utils"
 import type {
   BorrowQuote,
   LastEditedAmount,
@@ -90,46 +90,47 @@ export function RouteSortTabs({
   const selectedIndex = ROUTE_SORT_OPTION_INDEX[value]
 
   return (
-    <div
-      role="group"
+    <fieldset
       aria-label="Sort matched spokes"
-      className="relative grid w-full shrink-0 grid-cols-2 rounded-4xl bg-muted p-0.5 sm:w-auto"
+      className="m-0 grid min-w-0 border-0 p-0"
     >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0.5 grid grid-cols-2"
-      >
+      <div className="relative grid w-full shrink-0 grid-cols-2 rounded-4xl bg-muted p-0.5 sm:w-auto">
         <span
-          className="rounded-4xl bg-background shadow-sm transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none"
-          style={{ transform: `translateX(${selectedIndex * 100}%)` }}
-        />
-      </span>
-      {ROUTE_SORT_OPTIONS.map((option) => {
-        const selected = option.value === value
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0.5 grid grid-cols-2"
+        >
+          <span
+            className="rounded-4xl bg-background shadow-sm transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none"
+            style={{ transform: `translateX(${selectedIndex * 100}%)` }}
+          />
+        </span>
+        {ROUTE_SORT_OPTIONS.map((option) => {
+          const selected = option.value === value
 
-        return (
-          <button
-            key={option.value}
-            type="button"
-            aria-pressed={selected}
-            onClick={() => onChange(option.value)}
-            className={cn(
-              "relative z-10 flex h-8 min-w-0 items-center justify-center rounded-4xl px-2.5 text-[11px] font-semibold whitespace-nowrap text-muted-foreground transition-colors duration-200 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:min-w-[10.25rem] sm:px-3 sm:text-xs",
-              selected && "text-foreground"
-            )}
-          >
-            <span className="inline-flex min-w-0 items-center gap-1">
-              <span className="truncate">{option.label}</span>
-              <InfoTooltip
-                content={option.tooltip}
-                label={`${option.label} details`}
-                nested
-              />
-            </span>
-          </button>
-        )
-      })}
-    </div>
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                "relative z-10 flex h-8 min-w-0 items-center justify-center rounded-4xl px-2.5 text-[11px] font-semibold whitespace-nowrap text-muted-foreground transition-colors duration-200 outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:min-w-[10.25rem] sm:px-3 sm:text-xs",
+                selected && "text-foreground"
+              )}
+            >
+              <span className="inline-flex min-w-0 items-center gap-1">
+                <span className="truncate">{option.label}</span>
+                <InfoTooltip
+                  content={option.tooltip}
+                  label={`${option.label} details`}
+                  nested
+                />
+              </span>
+            </button>
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }
 
@@ -227,13 +228,14 @@ export function MatchSummary({
               : null
           const currentDebtAmount =
             userTokenAmountsReady && routeLeg && existingPosition
-              ? debtAmountsByReserve.get(reserveKey(routeLeg.match.borrow)) ?? 0
+              ? (debtAmountsByReserve.get(reserveKey(routeLeg.match.borrow)) ??
+                0)
               : null
           const currentCollateralAmount =
             userTokenAmountsReady && routeLeg && existingPosition
-              ? collateralAmountsByReserve.get(
+              ? (collateralAmountsByReserve.get(
                   reserveKey(routeLeg.match.collateral)
-                ) ?? 0
+                ) ?? 0)
               : null
           const effectiveApyLabel = routeLeg
             ? formatEffectiveBorrowApy(routeLeg)
@@ -295,7 +297,10 @@ export function MatchSummary({
                   <span className="grid grid-cols-2 gap-2 text-sm">
                     <RouteCardMetric
                       label="Borrow Debt"
-                      value={formatBorrowDebtMetric(currentDebtAmount, routeLeg)}
+                      value={formatBorrowDebtMetric(
+                        currentDebtAmount,
+                        routeLeg
+                      )}
                     />
                     <RouteCardMetric
                       label="Collateral"
@@ -339,7 +344,10 @@ export function MatchSummary({
                     />
                     <RouteCardMetric
                       label="Liq. Price"
-                      value={formatLiquidationPriceMetric(positionImpact, routeLeg)}
+                      value={formatLiquidationPriceMetric(
+                        positionImpact,
+                        routeLeg
+                      )}
                     />
                   </span>
                 </div>
@@ -398,7 +406,9 @@ function buildRouteItems({
     const routeLeg = routeQuote ? buildDirectRouteLeg(match, routeQuote) : null
 
     return {
-      collateralFactor: percentRatio(match.collateral.settings.collateralFactor),
+      collateralFactor: percentRatio(
+        match.collateral.settings.collateralFactor
+      ),
       effectiveBorrowApy: routeLeg
         ? effectiveBorrowApyForLeg(routeLeg)
         : borrowApy(match.borrow) - supplyApy(match.collateral),
@@ -441,16 +451,12 @@ function compareRouteItems(
 
   if (routeSort === "apr") {
     return (
-      effectiveApyComparison ||
-      collateralFactorComparison ||
-      a.index - b.index
+      effectiveApyComparison || collateralFactorComparison || a.index - b.index
     )
   }
 
   return (
-    collateralFactorComparison ||
-    effectiveApyComparison ||
-    a.index - b.index
+    collateralFactorComparison || effectiveApyComparison || a.index - b.index
   )
 }
 
@@ -573,13 +579,14 @@ function SplitRouteButton({
                 : null
               const currentDebtAmount =
                 userTokenAmountsReady && existingPosition
-                  ? debtAmountsByReserve.get(reserveKey(leg.match.borrow)) ?? 0
+                  ? (debtAmountsByReserve.get(reserveKey(leg.match.borrow)) ??
+                    0)
                   : null
               const currentCollateralAmount =
                 userTokenAmountsReady && existingPosition
-                  ? collateralAmountsByReserve.get(
+                  ? (collateralAmountsByReserve.get(
                       reserveKey(leg.match.collateral)
-                    ) ?? 0
+                    ) ?? 0)
                   : null
 
               return (
@@ -699,9 +706,7 @@ function RouteCardMetric({
           label
         )}
       </span>
-      <span className="block min-w-0 text-[13px] font-semibold">
-        {content}
-      </span>
+      <span className="block min-w-0 text-[13px] font-semibold">{content}</span>
     </span>
   )
 }
@@ -723,40 +728,17 @@ function RouteHeaderEffectiveApy({ value }: { value: string }) {
 
 function EffectiveBorrowApyValue({ leg }: { leg: SplitLeg }) {
   return (
-    <span className="inline-flex min-w-0 items-center gap-1">
-      <span className="truncate">{formatEffectiveBorrowApy(leg)}</span>
-      <InfoTooltip
-        className="size-3.5 [&_svg]:size-3"
-        content={<EffectiveBorrowApyTooltipContent leg={leg} />}
-        label="Effective borrow APY details"
-      />
-    </span>
-  )
-}
-
-function EffectiveBorrowApyTooltipContent({ leg }: { leg: SplitLeg }) {
-  const borrowSymbol = tokenSymbol(leg.match.borrow)
-  const collateralSymbol = tokenSymbol(leg.match.collateral)
-
-  return (
-    <span className="flex w-56 flex-col gap-2">
-      <span className="text-[13px] font-semibold text-popover-foreground">
-        Effective Borrow APY {formatEffectiveBorrowApy(leg)}
-      </span>
-      <span className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-muted-foreground">
-        <span>{borrowSymbol} Borrow APY</span>
-        <span className="text-right font-medium text-popover-foreground">
-          {formatPercent(leg.match.borrow.summary.borrowApy)}
-        </span>
-        <span>{collateralSymbol} Collateral APY</span>
-        <span className="text-right font-medium text-popover-foreground">
-          {formatPercent(leg.match.collateral.summary.supplyApy)}
-        </span>
-      </span>
-      <span className="text-[11px] leading-relaxed text-muted-foreground">
-        Net cost = Borrow APY − Collateral APY.
-      </span>
-    </span>
+    <EffectiveBorrowApyPresentation
+      details={{
+        borrowApyLabel: formatPercent(leg.match.borrow.summary.borrowApy),
+        borrowSymbol: tokenSymbol(leg.match.borrow),
+        collateralApyLabel: formatPercent(
+          leg.match.collateral.summary.supplyApy
+        ),
+        collateralSymbol: tokenSymbol(leg.match.collateral),
+      }}
+      value={formatEffectiveBorrowApy(leg)}
+    />
   )
 }
 
@@ -802,13 +784,5 @@ function CompactRouteSummary({
         <span className="shrink-0 text-[13px] font-semibold">{apyValue}</span>
       </span>
     </span>
-  )
-}
-
-function HubBadge({ label }: { label: string }) {
-  return (
-    <Badge variant="outline" className="max-w-40 shrink px-1.5" title={label}>
-      <span className="min-w-0 truncate">{label}</span>
-    </Badge>
   )
 }

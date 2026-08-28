@@ -1,5 +1,5 @@
 import type { Reserve } from "@aave/react"
-import { parseUnits, type Address } from "viem"
+import { type Address, parseUnits } from "viem"
 import { mainnet } from "viem/chains"
 
 import { SIGNATURE_GATEWAY } from "@/configs/contracts"
@@ -78,11 +78,11 @@ function isMainnetSignatureGatewayLeg(leg: SplitLeg) {
 export function splitLegToBorrowLeg(leg: SplitLeg): BorrowLeg {
   return {
     borrowAmount: parseTokenAmount(
-      leg.debtAmount,
+      leg.debtAmountExact,
       tokenDecimals(leg.match.borrow)
     ),
     collateralAmount: parseTokenAmount(
-      leg.collateralAmount,
+      leg.collateralAmountExact,
       tokenDecimals(leg.match.collateral)
     ),
     collateralToken: leg.match.collateral.summary.supplied.token
@@ -93,19 +93,32 @@ export function splitLegToBorrowLeg(leg: SplitLeg): BorrowLeg {
   }
 }
 
-function parseTokenAmount(amount: number, decimals: number) {
-  return parseUnits(decimalAmount(amount, decimals), decimals)
-}
+function parseTokenAmount(amount: string, decimals: number) {
+  const normalized = amount.trim()
 
-function decimalAmount(amount: number, decimals: number) {
-  if (!Number.isFinite(amount) || amount <= 0) {
+  if (!/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(normalized)) {
     throw new Error("Token amount must be greater than zero")
   }
 
-  const precision = Math.min(Math.max(decimals, 0), 18)
-  const fixed = amount.toFixed(precision).replace(/\.?0+$/, "")
+  const fractionDigits = normalized.split(".")[1]?.length ?? 0
 
-  return fixed || "0"
+  if (fractionDigits > decimals) {
+    throw new Error("Token amount has more precision than the token supports")
+  }
+
+  let parsed: bigint
+
+  try {
+    parsed = parseUnits(normalized, decimals)
+  } catch {
+    throw new Error("Token amount has more precision than the token supports")
+  }
+
+  if (parsed <= BigInt(0)) {
+    throw new Error("Token amount must be greater than zero")
+  }
+
+  return parsed
 }
 
 function reserveOnChainId(reserve: Reserve) {

@@ -1,4 +1,4 @@
-export const eip712DomainAbi = [
+const eip712DomainAbi = [
   {
     type: "function",
     name: "eip712Domain",
@@ -14,6 +14,15 @@ export const eip712DomainAbi = [
       { name: "extensions", type: "uint256[]" },
     ],
   },
+] as const
+
+const signedAmountParams = [
+  { name: "spoke", type: "address" },
+  { name: "reserveId", type: "uint256" },
+  { name: "amount", type: "uint256" },
+  { name: "onBehalfOf", type: "address" },
+  { name: "nonce", type: "uint256" },
+  { name: "deadline", type: "uint256" },
 ] as const
 
 export const signatureGatewayAbi = [
@@ -93,14 +102,7 @@ export const signatureGatewayAbi = [
       {
         name: "params",
         type: "tuple",
-        components: [
-          { name: "spoke", type: "address" },
-          { name: "reserveId", type: "uint256" },
-          { name: "amount", type: "uint256" },
-          { name: "onBehalfOf", type: "address" },
-          { name: "nonce", type: "uint256" },
-          { name: "deadline", type: "uint256" },
-        ],
+        components: signedAmountParams,
       },
       { name: "signature", type: "bytes" },
     ],
@@ -135,14 +137,7 @@ export const signatureGatewayAbi = [
       {
         name: "params",
         type: "tuple",
-        components: [
-          { name: "spoke", type: "address" },
-          { name: "reserveId", type: "uint256" },
-          { name: "amount", type: "uint256" },
-          { name: "onBehalfOf", type: "address" },
-          { name: "nonce", type: "uint256" },
-          { name: "deadline", type: "uint256" },
-        ],
+        components: signedAmountParams,
       },
       { name: "signature", type: "bytes" },
     ],
@@ -201,22 +196,5 @@ export const erc20Abi = [
       { name: "amount", type: "uint256" },
     ],
     outputs: [{ type: "bool" }],
-  },
-] as const
-
-export const eip2612DetectionAbi = [
-  {
-    type: "function",
-    name: "nonces",
-    stateMutability: "view",
-    inputs: [{ name: "owner", type: "address" }],
-    outputs: [{ type: "uint256" }],
-  },
-  {
-    type: "function",
-    name: "DOMAIN_SEPARATOR",
-    stateMutability: "view",
-    inputs: [],
-    outputs: [{ type: "bytes32" }],
   },
 ] as const

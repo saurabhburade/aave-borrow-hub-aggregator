@@ -13,13 +13,7 @@ import {
 import { tooltipForMarketMetric } from "@/configs/tooltips"
 import { cn } from "@/lib/utils"
 
-export function Metric({
-  label,
-  value,
-}: {
-  label: string
-  value: ReactNode
-}) {
+export function Metric({ label, value }: { label: string; value: ReactNode }) {
   const tooltip = tooltipForMarketMetric(label)
 
   return (
@@ -66,9 +60,7 @@ export function SplitLegMetric({
       ) : (
         <span className={MICRO_LABEL_CLASS}>{label}</span>
       )}
-      <span className="block min-w-0 text-[12px] font-semibold">
-        {content}
-      </span>
+      <span className="block min-w-0 text-[12px] font-semibold">{content}</span>
     </span>
   )
 }

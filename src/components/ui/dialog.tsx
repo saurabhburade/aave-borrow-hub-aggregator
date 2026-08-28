@@ -1,7 +1,7 @@
 "use client"
 
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import * as React from "react"
+import type * as React from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -92,12 +92,4 @@ function DialogClose({
   )
 }
 
-export {
-  Dialog,
-  DialogBackdrop,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogPortal,
-  DialogTitle,
-}
+export { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle }

@@ -1,36 +1,49 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Aave Borrow Hub Aggregator
 
-## Getting Started
+A Next.js interface for comparing eligible Aave V4 spoke routes and preparing a borrow with the best estimated effective borrow APY. It supports direct and split routes, shows collateral and health-factor impacts, and executes through the SignatureGateway flow.
 
-First, run the development server:
+## Setup
+
+Use Node.js 20+ and pnpm.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Useful commands:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+pnpm start
+```
 
-## Learn More
+## Environment
 
-To learn more about Next.js, take a look at the following resources:
+Create a `.env.local` file when you need to override the defaults:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# Optional: Ethereum mainnet RPC endpoint. A public endpoint is used when omitted.
+NEXT_PUBLIC_MAINNET_RPC_URL=https://your-mainnet-rpc.example
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Optional: enables WalletConnect QR connections.
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_walletconnect_project_id
+```
 
-## Deploy on Vercel
+`NEXT_PUBLIC_MAINNET_RPC_URL` is optional; the app falls back to `https://ethereum-rpc.publicnode.com`. `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` is also optional: browser-injected wallets remain available without it, while WalletConnect QR is unavailable.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Verification
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Before opening a change, run:
+
+```bash
+pnpm typecheck
+pnpm lint
+```
+
+For changes to borrow execution, connect a wallet on Ethereum mainnet, enter a collateral and borrow amount, inspect the route preview, and verify the wallet’s signature and transaction prompts before submitting.

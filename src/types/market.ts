@@ -22,7 +22,9 @@ export type Match = {
 
 export type SplitLeg = {
   collateralAmount: number
+  collateralAmountExact: string
   debtAmount: number
+  debtAmountExact: string
   match: Match
   weight: number
 }
@@ -39,7 +41,9 @@ export type SplitRoute = {
 
 export type BorrowQuote = {
   collateralAmount: number
+  collateralAmountExact: string
   debtAmount: number
+  debtAmountExact: string
   exactAmounts: boolean
   healthFactor: number | null
 }

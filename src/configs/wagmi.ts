@@ -1,35 +1,35 @@
-import { getDefaultConfig } from "connectkit"
-import { createConfig, http } from "wagmi"
+import { createConfig, http, injected } from "wagmi"
+import { walletConnect } from "wagmi/connectors"
 
 import { appChains, mainnetRpcUrl } from "@/configs/chains"
-import { walletConnect } from 'wagmi/connectors'
 
 const walletConnectProjectId =
-  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim() ?? ""
-console.log("walletConnectProjectId", walletConnectProjectId)
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID?.trim()
+
 export function createWagmiConfig() {
+  // WalletConnect initializes browser storage while it is constructed. Keeping it
+  // out of the server config prevents prerender-time indexedDB access, and avoids
+  // constructing an unusable connector when no project ID has been supplied.
+  const connectors =
+    typeof window !== "undefined" && walletConnectProjectId
+      ? [
+          injected(),
+          walletConnect({
+            projectId: walletConnectProjectId,
+            showQrModal: false,
+          }),
+        ]
+      : [injected()]
 
-
-  return createConfig(
-    getDefaultConfig({
-      appName: "Borrow Aggregator",
-      appDescription: "Aave V4 reserves and spokes",
-      walletConnectProjectId,
-      chains: appChains,
-      connectors: [walletConnect({
-        projectId: walletConnectProjectId,
-        showQrModal: false,
-      })],
-      transports: Object.fromEntries(
-        appChains.map((chain) => [
-          chain.id,
-          http(chain.id === 1 ? mainnetRpcUrl : undefined),
-        ])
-        ,
-
-      ),
-    })
-  )
+  return createConfig({
+    chains: appChains,
+    connectors,
+    ssr: true,
+    transports: Object.fromEntries(
+      appChains.map((chain) => [
+        chain.id,
+        http(chain.id === 1 ? mainnetRpcUrl : undefined),
+      ])
+    ) as Record<(typeof appChains)[number]["id"], ReturnType<typeof http>>,
+  })
 }
-
-export const wagmiConfig = createWagmiConfig()

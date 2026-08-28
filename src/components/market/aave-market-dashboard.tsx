@@ -1,17 +1,5 @@
 "use client"
 
-import {
-  ChainsFilter,
-  Currency,
-  OrderDirection,
-  ReservesRequestFilter,
-  TimeWindow,
-  useChains,
-  useReserves,
-  useUserBorrows,
-  useUserPositions,
-  useUserSupplies,
-} from "@aave/react"
 import { useQueryClient } from "@tanstack/react-query"
 import * as React from "react"
 import { useAccount, useBalance } from "wagmi"
@@ -38,9 +26,10 @@ import {
   DEFAULT_DEBT_SYMBOL,
   DEFAULT_HEALTH_FACTOR,
   SPLIT_ROUTE_ID,
-  ZERO_EVM_ADDRESS,
 } from "@/configs/constants"
 import { MARKET_TOOLTIPS } from "@/configs/tooltips"
+import { useMarketData } from "@/hooks/market/use-market-data"
+import { useRouteCalculations } from "@/hooks/market/use-route-calculations"
 import { useBorrowExecution } from "@/hooks/use-borrow-execution"
 import {
   formatAmountInput,
@@ -48,13 +37,7 @@ import {
   tokenKey,
   tokenSymbol,
 } from "@/lib/aave/utils"
-import {
-  mapCollateralAmountsByReserve,
-  mapDebtAmountsByReserve,
-  mapPositionsBySpoke,
-  preferredAssetKey,
-  uniqueAssets,
-} from "@/lib/market/assets"
+import { preferredAssetKey } from "@/lib/market/assets"
 import {
   formatBalanceLabel,
   formatCollateralBalanceError,
@@ -67,11 +50,7 @@ import {
 } from "@/lib/market/execution"
 import {
   buildDirectRouteLeg,
-  buildSplitRoute,
   estimatePositionImpact,
-  estimateQuote,
-  rankMatches,
-  sortMatches,
   splitLegHealthFactor,
 } from "@/lib/market/routes"
 import type {
@@ -79,10 +58,6 @@ import type {
   RouteExecutionMode,
   RouteSortMode,
 } from "@/types/market"
-
-type UserPositionsHookArgs = Parameters<typeof useUserPositions>[0]
-
-const ROUTE_SORT_SKELETON_DELAY_MS = 180
 
 export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
   const queryClient = useQueryClient()
@@ -95,8 +70,6 @@ export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
   )
   const [selectedRouteId, setSelectedRouteId] = React.useState("")
   const [routeSort, setRouteSort] = React.useState<RouteSortMode>("apr")
-  const [displayedRouteSort, setDisplayedRouteSort] =
-    React.useState<RouteSortMode>("apr")
   const [lastEdited, setLastEdited] =
     React.useState<LastEditedAmount>("collateral")
   const [borrowModalOpen, setBorrowModalOpen] = React.useState(false)
@@ -113,106 +86,18 @@ export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
     txHash,
   } = useBorrowExecution({ chainId })
 
-  const chains = useChains({
-    query: { filter: ChainsFilter.ALL },
-  })
-  const chainOptions = React.useMemo(
-    () =>
-      chains.data?.map((chain) => ({
-        chainId: Number(chain.chainId),
-        icon: chain.icon,
-        name: chain.name,
-      })) ?? [],
-    [chains.data]
-  )
-  const marketChainIds = React.useMemo(
-    () =>
-      chains.data
-        ?.filter((chain) => Number(chain.chainId) === chainId)
-        .map((chain) => chain.chainId) ?? [],
-    [chainId, chains.data]
-  )
-  const reserves = useReserves({
-    query: { chainIds: marketChainIds },
-    filter: ReservesRequestFilter.All,
-    orderBy: { assetName: OrderDirection.Asc },
-    currency: Currency.Usd,
-    timeWindow: TimeWindow.LastDay,
-    pause: marketChainIds.length === 0,
-  })
-  const userPositions = useUserPositions({
-    user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
-    filter: { chainIds: marketChainIds },
-    orderBy: { balance: OrderDirection.Desc },
-    currency: Currency.Usd,
-    timeWindow: TimeWindow.LastDay,
-    pause: !address || marketChainIds.length === 0,
-  })
-  const userSupplies = useUserSupplies({
-    query: {
-      userChains: {
-        chainIds: marketChainIds,
-        user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
-      },
-    },
-    orderBy: { amount: OrderDirection.Desc },
-    currency: Currency.Usd,
-    timeWindow: TimeWindow.LastDay,
-    pause: !address || marketChainIds.length === 0,
-  })
-  const userBorrows = useUserBorrows({
-    query: {
-      userChains: {
-        chainIds: marketChainIds,
-        user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
-      },
-    },
-    orderBy: { amount: OrderDirection.Desc },
-    currency: Currency.Usd,
-    timeWindow: TimeWindow.LastDay,
-    pause: !address || marketChainIds.length === 0,
-  })
-
-  const reserveList = React.useMemo(() => reserves.data ?? [], [reserves.data])
-  const userPositionList = React.useMemo(
-    () => userPositions.data ?? [],
-    [userPositions.data]
-  )
-  const userSupplyList = React.useMemo(
-    () => userSupplies.data ?? [],
-    [userSupplies.data]
-  )
-  const userBorrowList = React.useMemo(
-    () => userBorrows.data ?? [],
-    [userBorrows.data]
-  )
-  const positionsBySpoke = React.useMemo(
-    () => mapPositionsBySpoke(userPositionList),
-    [userPositionList]
-  )
-  const collateralAmountsByReserve = React.useMemo(
-    () => mapCollateralAmountsByReserve(userSupplyList),
-    [userSupplyList]
-  )
-  const debtAmountsByReserve = React.useMemo(
-    () => mapDebtAmountsByReserve(userBorrowList),
-    [userBorrowList]
-  )
-  const userTokenAmountsReady =
-    !address ||
-    (!userSupplies.loading &&
-      !userBorrows.loading &&
-      !userSupplies.error &&
-      !userBorrows.error)
-  const debtAssets = React.useMemo(
-    () => uniqueAssets(reserveList.filter((reserve) => reserve.canBorrow)),
-    [reserveList]
-  )
-  const collateralAssets = React.useMemo(
-    () =>
-      uniqueAssets(reserveList.filter((reserve) => reserve.canUseAsCollateral)),
-    [reserveList]
-  )
+  const {
+    chainOptions,
+    collateralAmountsByReserve,
+    collateralAssets,
+    debtAmountsByReserve,
+    debtAssets,
+    error,
+    loading,
+    positionsBySpoke,
+    reserveList,
+    userTokenAmountsReady,
+  } = useMarketData({ address, chainId })
 
   const selectedDebtKey =
     debtAssetKey || preferredAssetKey(debtAssets, DEFAULT_DEBT_SYMBOL)
@@ -254,92 +139,27 @@ export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
       enabled: Boolean(address && selectedCollateralAsset),
     },
   })
-  const matches = React.useMemo(
-    () => rankMatches(reserveList, selectedDebtKey, selectedCollateralKey),
-    [reserveList, selectedDebtKey, selectedCollateralKey]
-  )
-  const parsedDebtAmount = parseInputAmount(debtAmount)
-  const quoteCollateralAmount = lastEdited === "debt" ? "" : collateralAmount
-  const parsedCollateralAmount = parseInputAmount(quoteCollateralAmount)
-  const amount =
-    lastEdited === "debt" ? parsedDebtAmount : parsedCollateralAmount
-  const hasAmount = amount > 0
-  React.useEffect(() => {
-    if (displayedRouteSort === routeSort) {
-      return
-    }
-
-    const timeoutId = window.setTimeout(() => {
-      setDisplayedRouteSort(routeSort)
-    }, ROUTE_SORT_SKELETON_DELAY_MS)
-
-    return () => window.clearTimeout(timeoutId)
-  }, [displayedRouteSort, routeSort])
-  const matchedSpokes = React.useMemo(
-    () =>
-      hasAmount
-        ? sortMatches(
-            matches,
-            displayedRouteSort,
-            debtAmount,
-            quoteCollateralAmount,
-            lastEdited,
-            healthFactorTarget
-          )
-        : [],
-    [
-      debtAmount,
-      displayedRouteSort,
-      hasAmount,
-      healthFactorTarget,
-      lastEdited,
-      matches,
-      quoteCollateralAmount,
-    ]
-  )
-  const splitRoute = React.useMemo(
-    () =>
-      hasAmount
-        ? buildSplitRoute(
-            matchedSpokes,
-            debtAmount,
-            quoteCollateralAmount,
-            lastEdited,
-            healthFactorTarget
-          )
-        : null,
-    [
-      debtAmount,
-      hasAmount,
-      healthFactorTarget,
-      lastEdited,
-      matchedSpokes,
-      quoteCollateralAmount,
-    ]
-  )
-  const activeRouteId =
-    selectedRouteId === SPLIT_ROUTE_ID && splitRoute
-      ? SPLIT_ROUTE_ID
-      : matchedSpokes.some((match) => match.spokeId === selectedRouteId)
-        ? selectedRouteId
-        : (matchedSpokes[0]?.spokeId ?? "")
-  const selectedMatch =
-    activeRouteId === SPLIT_ROUTE_ID
-      ? undefined
-      : matchedSpokes.find((match) => match.spokeId === activeRouteId)
-  const quote = selectedMatch
-    ? estimateQuote(
-        selectedMatch,
-        debtAmount,
-        quoteCollateralAmount,
-        lastEdited,
-        healthFactorTarget
-      )
-    : null
-  const error = chains.error ?? reserves.error
-  const loading =
-    chains.loading || (reserves.loading && reserveList.length === 0)
-  const routeSorting = hasAmount && displayedRouteSort !== routeSort
+  const {
+    activeRouteId,
+    displayedRouteSort,
+    hasAmount,
+    matchedSpokes,
+    quote,
+    quoteCollateralAmount,
+    routeSorting,
+    selectedMatch,
+    splitRoute,
+  } = useRouteCalculations({
+    collateralAmount,
+    debtAmount,
+    healthFactorTarget,
+    lastEdited,
+    reserveList,
+    routeSort,
+    selectedCollateralKey,
+    selectedDebtKey,
+    selectedRouteId,
+  })
   const showEligibleSpokesSkeleton = loading || routeSorting
   const routeMode = activeRouteId === SPLIT_ROUTE_ID ? "split" : "direct"
   const activeExecutionMode: RouteExecutionMode = "signature-gateway"
@@ -347,7 +167,7 @@ export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
     lastEdited === "debt"
       ? routeMode === "split"
         ? (splitRoute?.collateralAmount ?? null)
-        : (quote?.collateralAmount ?? null)
+        : (quote?.collateral.value ?? null)
       : null
   const displayedCollateralAmount =
     estimatedCollateralAmount && estimatedCollateralAmount > 0
@@ -359,7 +179,7 @@ export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
   const requiredCollateralAmount =
     routeMode === "split"
       ? (splitRoute?.collateralAmount ?? displayedCollateralNumericAmount)
-      : (quote?.collateralAmount ?? displayedCollateralNumericAmount)
+      : (quote?.collateral.value ?? displayedCollateralNumericAmount)
   const collateralBalanceAmount = collateralBalance.data
     ? parseInputAmount(collateralBalance.data.formatted)
     : null

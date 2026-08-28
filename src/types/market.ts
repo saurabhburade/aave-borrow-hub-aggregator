@@ -20,11 +20,14 @@ export type Match = {
   spokeId: string
 }
 
+type TokenAmount = {
+  exact: string
+  value: number
+}
+
 export type SplitLeg = {
-  collateralAmount: number
-  collateralAmountExact: string
-  debtAmount: number
-  debtAmountExact: string
+  collateral: TokenAmount
+  debt: TokenAmount
   match: Match
   weight: number
 }
@@ -40,10 +43,8 @@ export type SplitRoute = {
 }
 
 export type BorrowQuote = {
-  collateralAmount: number
-  collateralAmountExact: string
-  debtAmount: number
-  debtAmountExact: string
+  collateral: TokenAmount
+  debt: TokenAmount
   exactAmounts: boolean
   healthFactor: number | null
 }

@@ -27,7 +27,7 @@ export function formatBorrowDebtMetric(
   }
 
   const symbol = tokenSymbol(leg.match.borrow)
-  return formatTokenMetricTransition(currentDebtAmount, leg.debtAmount, symbol)
+  return formatTokenMetricTransition(currentDebtAmount, leg.debt.value, symbol)
 }
 
 export function formatCollateralAmountMetric(
@@ -41,7 +41,7 @@ export function formatCollateralAmountMetric(
   const symbol = tokenSymbol(leg.match.collateral)
   return formatTokenMetricTransition(
     currentCollateralAmount,
-    leg.collateralAmount,
+    leg.collateral.value,
     symbol
   )
 }

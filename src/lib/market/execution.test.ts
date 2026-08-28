@@ -1,7 +1,7 @@
 import type { Reserve } from "@aave/react"
 import { describe, expect, it } from "vitest"
 import type { Match, SplitLeg } from "@/types/market"
-import { signatureGatewayTarget, splitLegToBorrowLeg } from "./execution"
+import { splitLegToBorrowLeg } from "./execution"
 
 const WETH = "0x0000000000000000000000000000000000000001"
 const USDC = "0x0000000000000000000000000000000000000002"
@@ -51,10 +51,14 @@ function leg({
   }
 
   return {
-    collateralAmount: Number(collateralAmountExact),
-    collateralAmountExact,
-    debtAmount: Number(debtAmountExact),
-    debtAmountExact,
+    collateral: {
+      exact: collateralAmountExact,
+      value: Number(collateralAmountExact),
+    },
+    debt: {
+      exact: debtAmountExact,
+      value: Number(debtAmountExact),
+    },
     match,
     weight: 1,
   } satisfies SplitLeg
@@ -113,15 +117,13 @@ describe("split leg execution encoding", () => {
     ).toThrow("not available")
   })
 
-  it("rejects a split route spanning multiple chains", () => {
-    expect(
-      signatureGatewayTarget([
-        leg(),
+  it("rejects a gateway that differs from the configured chain contract", () => {
+    expect(() =>
+      splitLegToBorrowLeg(
         leg({
-          chainId: 43114,
-          signatureGateway: AVALANCHE_SIGNATURE_GATEWAY,
-        }),
-      ])
-    ).toBeNull()
+          signatureGateway: "0x0000000000000000000000000000000000000004",
+        })
+      )
+    ).toThrow("not available")
   })
 })

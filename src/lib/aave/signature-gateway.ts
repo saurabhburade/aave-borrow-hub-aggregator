@@ -3,8 +3,10 @@ import {
   bytesToHex,
   encodeFunctionData,
   type Hex,
+  isAddress,
   type PublicClient,
   type WalletClient,
+  zeroAddress,
 } from "viem"
 
 import { signatureGatewayAbi, spokeAbi } from "@/configs/abis"
@@ -38,12 +40,57 @@ export type BorrowSigningStatus = {
   status: "signing" | "signed" | "skipped" | "rejected"
 }
 
+export function validateBorrowLegTargets(
+  legs: BorrowLeg[],
+  expectedChainId: number
+) {
+  const gateway = legs[0]?.signatureGateway
+
+  if (
+    !gateway ||
+    !isAddress(gateway) ||
+    gateway.toLowerCase() === zeroAddress
+  ) {
+    throw new Error("SignatureGateway is not available on this chain")
+  }
+
+  if (
+    legs.some(
+      (leg) =>
+        leg.chainId !== expectedChainId ||
+        leg.signatureGateway.toLowerCase() !== gateway.toLowerCase()
+    )
+  ) {
+    throw new Error("All borrow legs must use one chain and SignatureGateway")
+  }
+
+  return gateway
+}
+
 type Eip712Domain = {
   chainId?: bigint
   name?: string
   salt?: Hex
   verifyingContract?: Address
   version?: string
+}
+
+async function signWithStatus({
+  action,
+  legIndex,
+  onSigningStatus,
+  sign,
+}: {
+  action: BorrowSigningAction
+  legIndex: number
+  onSigningStatus?: (status: BorrowSigningStatus) => void
+  sign: () => Promise<Hex>
+}) {
+  onSigningStatus?.({ action, legIndex, status: "signing" })
+  const signature = await sign()
+  onSigningStatus?.({ action, legIndex, status: "signed" })
+
+  return signature
 }
 
 async function getEip712Domain(
@@ -172,22 +219,18 @@ async function maybeEncodePositionManagerApproval({
     deadline,
   } as const
 
-  onSigningStatus?.({
+  const signature = await signWithStatus({
     action: "pm-approval",
     legIndex,
-    status: "signing",
-  })
-  const signature = await walletClient.signTypedData({
-    account: user,
-    domain,
-    types: PM_TYPES,
-    primaryType: "SetUserPositionManagers",
-    message,
-  })
-  onSigningStatus?.({
-    action: "pm-approval",
-    legIndex,
-    status: "signed",
+    onSigningStatus,
+    sign: () =>
+      walletClient.signTypedData({
+        account: user,
+        domain,
+        types: PM_TYPES,
+        primaryType: "SetUserPositionManagers",
+        message,
+      }),
   })
 
   return encodeFunctionData({
@@ -265,15 +308,19 @@ export async function encodeSignedBorrowLegs({
       spoke: leg.spoke,
     } as const
     if (findSigningStatus(resumeStatuses, legIndex, "supply") !== "signed") {
-      onSigningStatus?.({ action: "supply", legIndex, status: "signing" })
-      const supplySignature = await walletClient.signTypedData({
-        account: user,
-        domain: gatewayDomain,
-        types: SUPPLY_TYPES,
-        primaryType: "Supply",
-        message: supplyParams,
+      const supplySignature = await signWithStatus({
+        action: "supply",
+        legIndex,
+        onSigningStatus,
+        sign: () =>
+          walletClient.signTypedData({
+            account: user,
+            domain: gatewayDomain,
+            types: SUPPLY_TYPES,
+            primaryType: "Supply",
+            message: supplyParams,
+          }),
       })
-      onSigningStatus?.({ action: "supply", legIndex, status: "signed" })
 
       const supplyCall = encodeFunctionData({
         abi: signatureGatewayAbi,
@@ -295,15 +342,19 @@ export async function encodeSignedBorrowLegs({
     if (
       findSigningStatus(resumeStatuses, legIndex, "collateral") !== "signed"
     ) {
-      onSigningStatus?.({ action: "collateral", legIndex, status: "signing" })
-      const collateralSignature = await walletClient.signTypedData({
-        account: user,
-        domain: gatewayDomain,
-        types: SET_COLLATERAL_TYPES,
-        primaryType: "SetUsingAsCollateral",
-        message: collateralParams,
+      const collateralSignature = await signWithStatus({
+        action: "collateral",
+        legIndex,
+        onSigningStatus,
+        sign: () =>
+          walletClient.signTypedData({
+            account: user,
+            domain: gatewayDomain,
+            types: SET_COLLATERAL_TYPES,
+            primaryType: "SetUsingAsCollateral",
+            message: collateralParams,
+          }),
       })
-      onSigningStatus?.({ action: "collateral", legIndex, status: "signed" })
 
       const collateralCall = encodeFunctionData({
         abi: signatureGatewayAbi,
@@ -323,15 +374,19 @@ export async function encodeSignedBorrowLegs({
       spoke: leg.spoke,
     } as const
     if (findSigningStatus(resumeStatuses, legIndex, "borrow") !== "signed") {
-      onSigningStatus?.({ action: "borrow", legIndex, status: "signing" })
-      const borrowSignature = await walletClient.signTypedData({
-        account: user,
-        domain: gatewayDomain,
-        types: BORROW_TYPES,
-        primaryType: "Borrow",
-        message: borrowParams,
+      const borrowSignature = await signWithStatus({
+        action: "borrow",
+        legIndex,
+        onSigningStatus,
+        sign: () =>
+          walletClient.signTypedData({
+            account: user,
+            domain: gatewayDomain,
+            types: BORROW_TYPES,
+            primaryType: "Borrow",
+            message: borrowParams,
+          }),
       })
-      onSigningStatus?.({ action: "borrow", legIndex, status: "signed" })
 
       const borrowCall = encodeFunctionData({
         abi: signatureGatewayAbi,

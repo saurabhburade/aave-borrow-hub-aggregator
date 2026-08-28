@@ -1,4 +1,4 @@
-export const SUPPORTED_CHAIN_IDS = [1, 43114] as const
+const SUPPORTED_CHAIN_IDS = [1, 43114] as const
 
 export type AppChainId = (typeof SUPPORTED_CHAIN_IDS)[number]
 

@@ -6,10 +6,13 @@
     "dev": "next dev --webpack",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "biome check . && eslint",
-    "lint:fix": "biome check --write .",
+    "lint": "biome check . && eslint .",
+    "lint:fix": "biome check --write . && eslint . --fix",
+    "lint:staged": "lint-staged",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "pnpm lint && pnpm typecheck && pnpm test",
+    "prepare": "husky"
   },
   "dependencies": {
     "@aave/react": "4.0.0-next.54",
@@ -36,6 +39,8 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.4.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11"

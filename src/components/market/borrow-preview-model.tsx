@@ -96,11 +96,11 @@ export function buildBorrowPreview({
 
   return {
     collateralLabel: formatTokenAmountLabel(
-      quote.collateralAmount,
+      quote.collateral.value,
       tokenSymbol(selectedMatch.collateral)
     ),
     debtLabel: formatTokenAmountLabel(
-      quote.debtAmount,
+      quote.debt.value,
       tokenSymbol(selectedMatch.borrow)
     ),
     effectiveBorrowApyLabel: formatEffectiveBorrowApy(routeLeg),
@@ -131,11 +131,11 @@ function buildBorrowPreviewLeg(
 
   return {
     collateralLabel: formatTokenAmountLabel(
-      leg.collateralAmount,
+      leg.collateral.value,
       tokenSymbol(leg.match.collateral)
     ),
     debtLabel: formatTokenAmountLabel(
-      leg.debtAmount,
+      leg.debt.value,
       tokenSymbol(leg.match.borrow)
     ),
     effectiveBorrowApyBreakdown: {

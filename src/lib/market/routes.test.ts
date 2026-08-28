@@ -73,8 +73,8 @@ describe("market route amounts", () => {
 
     const quote = estimateQuote(match, "0.123456789012345678", "", "debt", 2)
 
-    expect(quote?.debtAmountExact).toBe("0.123456789012345678")
-    expect(quote?.debtAmount).toBe(Number("0.123456789012345678"))
+    expect(quote?.debt.exact).toBe("0.123456789012345678")
+    expect(quote?.debt.value).toBe(Number("0.123456789012345678"))
   })
 
   it("rounds derived debt down at the debt token precision", () => {
@@ -90,7 +90,7 @@ describe("market route amounts", () => {
 
     const quote = estimateQuote(match, "", "1", "collateral", 1.5)
 
-    expect(quote?.debtAmountExact).toBe("0.533333")
+    expect(quote?.debt.exact).toBe("0.533333")
   })
 
   it("preserves integer zeros for zero-decimal derived amounts", () => {
@@ -107,7 +107,7 @@ describe("market route amounts", () => {
 
     const quote = estimateQuote(match, "4", "", "debt", 2)
 
-    expect(quote?.collateralAmountExact).toBe("10")
+    expect(quote?.collateral.exact).toBe("10")
   })
 
   it("allocates split totals with decimal-safe weights and token-unit remainder", () => {
@@ -136,12 +136,9 @@ describe("market route amounts", () => {
 
     const route = buildSplitRoute(matches, "0.1", "", "debt", 2)
 
-    expect(route?.legs.map((leg) => leg.debtAmountExact)).toEqual([
-      "0.065",
-      "0.035",
-    ])
+    expect(route?.legs.map((leg) => leg.debt.exact)).toEqual(["0.065", "0.035"])
     expect(route?.debtAmount).toBe(0.1)
-    expect(route?.legs.map((leg) => leg.collateralAmountExact)).toEqual([
+    expect(route?.legs.map((leg) => leg.collateral.exact)).toEqual([
       "0.1625",
       "0.0875",
     ])

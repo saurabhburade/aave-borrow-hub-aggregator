@@ -2,6 +2,8 @@
 
 A multichain Next.js interface for comparing eligible Aave V4 spoke routes and preparing a borrow with the best estimated effective borrow APY. It supports direct and split routes, shows collateral and health-factor impacts, and executes through the SignatureGateway deployed for the selected chain.
 
+![Aave Borrow Hub Aggregator interface](docs/images/aave-borrow-hub-aggregator.jpg)
+
 ## Setup
 
 Use Node.js 20+ and pnpm.

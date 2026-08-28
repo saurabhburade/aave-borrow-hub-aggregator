@@ -2,6 +2,7 @@ import type { Reserve } from "@aave/react"
 import { type Address, isAddress, parseUnits, zeroAddress } from "viem"
 
 import type { AppChainId } from "@/configs/chain-ids"
+import { signatureGatewayForChain } from "@/configs/contracts"
 import type { BorrowLeg } from "@/lib/aave/signature-gateway"
 import { tokenDecimals, tokenSymbol } from "@/lib/aave/utils"
 import { buildDirectRouteLeg } from "@/lib/market/routes"
@@ -43,7 +44,7 @@ export function getExecutionDisabledReason({
 
     if (
       splitRoute.legs.some(
-        (leg) => leg.debtAmount <= 0 || leg.collateralAmount <= 0
+        (leg) => leg.debt.value <= 0 || leg.collateral.value <= 0
       )
     ) {
       return "Split amounts are unavailable"
@@ -56,7 +57,7 @@ export function getExecutionDisabledReason({
     return "Select a spoke route"
   }
 
-  if (quote.debtAmount <= 0) {
+  if (quote.debt.value <= 0) {
     return "Borrow amount is unavailable"
   }
 
@@ -72,7 +73,7 @@ export function getExecutionDisabledReason({
     return "Route belongs to a different chain"
   }
 
-  if (directLeg.collateralAmount <= 0) {
+  if (directLeg.collateral.value <= 0) {
     return "Collateral amount is unavailable"
   }
 
@@ -88,11 +89,11 @@ export function splitLegToBorrowLeg(leg: SplitLeg): BorrowLeg {
 
   return {
     borrowAmount: parseTokenAmount(
-      leg.debtAmountExact,
+      leg.debt.exact,
       tokenDecimals(leg.match.borrow)
     ),
     collateralAmount: parseTokenAmount(
-      leg.collateralAmountExact,
+      leg.collateral.exact,
       tokenDecimals(leg.match.collateral)
     ),
     collateralToken: leg.match.collateral.summary.supplied.token
@@ -105,7 +106,7 @@ export function splitLegToBorrowLeg(leg: SplitLeg): BorrowLeg {
   }
 }
 
-export function signatureGatewayTarget(legs: SplitLeg[]) {
+function signatureGatewayTarget(legs: SplitLeg[]) {
   if (legs.length === 0) return null
 
   const first = signatureGatewayTargetForLeg(legs[0])
@@ -129,21 +130,24 @@ function signatureGatewayTargetForLeg(leg: SplitLeg) {
   const collateralChainId = Number(leg.match.collateral.chain.chainId)
   const borrowGateway = String(leg.match.borrow.chain.signatureGateway)
   const collateralGateway = String(leg.match.collateral.chain.signatureGateway)
+  const configuredGateway = signatureGatewayForChain(borrowChainId)
 
   if (
     !Number.isInteger(borrowChainId) ||
     borrowChainId !== collateralChainId ||
+    !configuredGateway ||
     !isAddress(borrowGateway) ||
     !isAddress(collateralGateway) ||
     sameAddress(borrowGateway, zeroAddress) ||
-    !sameAddress(borrowGateway, collateralGateway)
+    !sameAddress(borrowGateway, collateralGateway) ||
+    !sameAddress(borrowGateway, configuredGateway)
   ) {
     return null
   }
 
   return {
     chainId: borrowChainId,
-    signatureGateway: borrowGateway as Address,
+    signatureGateway: configuredGateway,
   }
 }
 

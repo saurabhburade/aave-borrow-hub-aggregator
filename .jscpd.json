@@ -1,0 +1,6 @@
+{
+  "ignore": ["**/configs/abis.ts", "**/lib/aave/typed-data.ts"],
+  "minLines": 8,
+  "minTokens": 60,
+  "reporters": ["console"]
+}

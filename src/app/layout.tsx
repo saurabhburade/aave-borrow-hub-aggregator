@@ -5,6 +5,9 @@ import { Providers } from "@/app/providers"
 export const metadata: Metadata = {
   title: "Borrow Aggregator",
   description: "Aave V4 spokes and reserves",
+  icons: {
+    icon: "/favicon.ico",
+  },
 }
 
 export default function RootLayout({

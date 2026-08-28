@@ -30,7 +30,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { InfoLabel } from "@/components/ui/info-tooltip"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ChainSelector } from "@/components/wallet/chain-selector"
 import { ConnectWalletButton } from "@/components/wallet/connect-wallet-button"
+import type { AppChainId } from "@/configs/chain-ids"
 import {
   DEFAULT_COLLATERAL_SYMBOL,
   DEFAULT_DEBT_SYMBOL,
@@ -82,7 +84,7 @@ type UserPositionsHookArgs = Parameters<typeof useUserPositions>[0]
 
 const ROUTE_SORT_SKELETON_DELAY_MS = 180
 
-export function AaveMarketDashboard() {
+export function AaveMarketDashboard({ chainId }: { chainId: AppChainId }) {
   const queryClient = useQueryClient()
   const [debtAssetKey, setDebtAssetKey] = React.useState("")
   const [collateralAssetKey, setCollateralAssetKey] = React.useState("")
@@ -109,54 +111,66 @@ export function AaveMarketDashboard() {
     signatureStatuses,
     stage: executionStage,
     txHash,
-  } = useBorrowExecution()
+  } = useBorrowExecution({ chainId })
 
   const chains = useChains({
     query: { filter: ChainsFilter.ALL },
   })
-  const chainIds = React.useMemo(
-    () => chains.data?.map((chain) => chain.chainId) ?? [],
+  const chainOptions = React.useMemo(
+    () =>
+      chains.data?.map((chain) => ({
+        chainId: Number(chain.chainId),
+        icon: chain.icon,
+        name: chain.name,
+      })) ?? [],
     [chains.data]
   )
+  const marketChainIds = React.useMemo(
+    () =>
+      chains.data
+        ?.filter((chain) => Number(chain.chainId) === chainId)
+        .map((chain) => chain.chainId) ?? [],
+    [chainId, chains.data]
+  )
   const reserves = useReserves({
-    query: { chainIds },
+    query: { chainIds: marketChainIds },
     filter: ReservesRequestFilter.All,
     orderBy: { assetName: OrderDirection.Asc },
     currency: Currency.Usd,
     timeWindow: TimeWindow.LastDay,
-    pause: chainIds.length === 0,
+    pause: marketChainIds.length === 0,
   })
   const userPositions = useUserPositions({
     user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
-    filter: { chainIds },
+    filter: { chainIds: marketChainIds },
     orderBy: { balance: OrderDirection.Desc },
     currency: Currency.Usd,
     timeWindow: TimeWindow.LastDay,
-    pause: !address || chainIds.length === 0,
+    pause: !address || marketChainIds.length === 0,
   })
   const userSupplies = useUserSupplies({
     query: {
       userChains: {
-        chainIds,
+        chainIds: marketChainIds,
         user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
       },
     },
     orderBy: { amount: OrderDirection.Desc },
     currency: Currency.Usd,
     timeWindow: TimeWindow.LastDay,
-    pause: !address || chainIds.length === 0,
+    pause: !address || marketChainIds.length === 0,
   })
   const userBorrows = useUserBorrows({
     query: {
       userChains: {
-        chainIds,
+        chainIds: marketChainIds,
         user: (address ?? ZERO_EVM_ADDRESS) as UserPositionsHookArgs["user"],
       },
     },
     orderBy: { amount: OrderDirection.Desc },
     currency: Currency.Usd,
     timeWindow: TimeWindow.LastDay,
-    pause: !address || chainIds.length === 0,
+    pause: !address || marketChainIds.length === 0,
   })
 
   const reserveList = React.useMemo(() => reserves.data ?? [], [reserves.data])
@@ -426,6 +440,7 @@ export function AaveMarketDashboard() {
     splitRoute,
   })
   const routeExecutionDisabledReason = getExecutionDisabledReason({
+    chainId,
     connected: Boolean(address),
     mode: routeMode,
     quote,
@@ -493,7 +508,10 @@ export function AaveMarketDashboard() {
               Aave Pro Aggregator
             </h1>
           </div>
-          <ConnectWalletButton />
+          <div className="flex items-center gap-2">
+            <ChainSelector chains={chainOptions} selectedChainId={chainId} />
+            <ConnectWalletButton />
+          </div>
         </header>
 
         {error ? (
@@ -639,6 +657,7 @@ export function AaveMarketDashboard() {
 
         <BorrowExecutionModal
           approvalTxHash={approvalTxHash}
+          chainId={chainId}
           disabled={executeDisabled}
           disabledReason={executionDisabledReason}
           error={executionError}

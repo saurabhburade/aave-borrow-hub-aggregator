@@ -1,17 +1,20 @@
 "use client"
 
 import * as React from "react"
-import type { Address, Hash, Hex, PublicClient } from "viem"
-import { mainnet } from "viem/chains"
 import {
-  useAccount,
-  usePublicClient,
-  useSwitchChain,
-  useWalletClient,
-} from "wagmi"
+  type Address,
+  type Hash,
+  type Hex,
+  isAddress,
+  type PublicClient,
+  zeroAddress,
+} from "viem"
+import { useAccount, useConfig, usePublicClient, useSwitchChain } from "wagmi"
+import { getWalletClient } from "wagmi/actions"
 
 import { erc20Abi, signatureGatewayAbi } from "@/configs/abis"
-import { SIGNATURE_GATEWAY } from "@/configs/contracts"
+import type { AppChainId } from "@/configs/chain-ids"
+import { appChainById } from "@/configs/chains"
 import {
   type BorrowLeg,
   type BorrowSigningStatus,
@@ -67,10 +70,10 @@ const idleExecutionState: ExecutionState = {
   txHash: null,
 }
 
-export function useBorrowExecution() {
-  const { address: user, chainId } = useAccount()
-  const { data: walletClient } = useWalletClient()
-  const publicClient = usePublicClient({ chainId: mainnet.id })
+export function useBorrowExecution({ chainId }: { chainId: AppChainId }) {
+  const { address: user, chainId: walletChainId } = useAccount()
+  const config = useConfig()
+  const publicClient = usePublicClient({ chainId })
   const { switchChainAsync } = useSwitchChain()
   const [state, setState] = React.useState<ExecutionState>(idleExecutionState)
   const splitExecutionCacheRef = React.useRef<SplitExecutionCache | null>(null)
@@ -103,16 +106,19 @@ export function useBorrowExecution() {
         throw new Error("Connect a wallet before borrowing")
       }
 
-      if (!publicClient) {
-        throw new Error("Mainnet public client is not configured")
-      }
-
-      if (!walletClient) {
-        throw new Error("Wallet client is not ready")
-      }
-
       if (legs.length < 1) {
         throw new Error("Spoke borrow requires at least one leg")
+      }
+
+      if (!publicClient) {
+        throw new Error(`Public client for chain ${chainId} is not configured`)
+      }
+
+      const signatureGateway = validateBorrowLegTargets(legs, chainId)
+      const executionChain = appChainById(chainId)
+
+      if (!executionChain) {
+        throw new Error(`Chain ${chainId} is not configured`)
       }
 
       const previousState = stateRef.current
@@ -152,11 +158,14 @@ export function useBorrowExecution() {
       })
 
       try {
-        if (walletClient.chain?.id !== mainnet.id) {
-          await switchChainAsync({ chainId: mainnet.id })
+        if (walletChainId !== chainId) {
+          await switchChainAsync({ chainId })
         }
 
+        const walletClient = await getWalletClient(config, { chainId })
+
         const approvals = await missingCollateralApprovals({
+          gateway: signatureGateway,
           legs,
           publicClient,
           user: user as Address,
@@ -175,11 +184,11 @@ export function useBorrowExecution() {
           for (const approval of approvals) {
             const approvalTxHash = await walletClient.writeContract({
               account: user,
-              chain: mainnet,
+              chain: executionChain,
               address: approval.token,
               abi: erc20Abi,
               functionName: "approve",
-              args: [SIGNATURE_GATEWAY, approval.amount],
+              args: [signatureGateway, approval.amount],
             })
 
             setState((current) => ({
@@ -214,7 +223,7 @@ export function useBorrowExecution() {
             }))
             await publicClient.simulateContract({
               account: user,
-              address: SIGNATURE_GATEWAY,
+              address: signatureGateway,
               abi: signatureGatewayAbi,
               functionName: "multicall",
               args: [calls],
@@ -231,8 +240,8 @@ export function useBorrowExecution() {
           }))
           const txHash = await walletClient.writeContract({
             account: user,
-            chain: mainnet,
-            address: SIGNATURE_GATEWAY,
+            chain: executionChain,
+            address: signatureGateway,
             abi: signatureGatewayAbi,
             functionName: "multicall",
             args: [calls],
@@ -283,7 +292,7 @@ export function useBorrowExecution() {
 
         const activeSigningCache = {
           actionKey,
-          chainId: mainnet.id,
+          chainId,
           calls: [...(signingCache?.calls ?? [])],
           complete: false,
           deadline,
@@ -328,12 +337,13 @@ export function useBorrowExecution() {
           },
           publicClient,
           resumeStatuses,
+          signatureGateway,
           user: user as Address,
           walletClient,
         })
         splitExecutionCacheRef.current = {
           actionKey,
-          chainId: mainnet.id,
+          chainId,
           calls,
           complete: true,
           deadline,
@@ -373,7 +383,7 @@ export function useBorrowExecution() {
         throw error
       }
     },
-    [chainId, publicClient, switchChainAsync, user, walletClient]
+    [chainId, config, publicClient, switchChainAsync, user, walletChainId]
   )
 
   return {
@@ -466,10 +476,12 @@ type RequiredCollateral = {
 }
 
 async function missingCollateralApprovals({
+  gateway,
   legs,
   publicClient,
   user,
 }: {
+  gateway: Address
   legs: BorrowLeg[]
   publicClient: PublicClient
   user: Address
@@ -493,7 +505,7 @@ async function missingCollateralApprovals({
       address: approval.token,
       abi: erc20Abi,
       functionName: "allowance",
-      args: [user, SIGNATURE_GATEWAY],
+      args: [user, gateway],
     })
 
     if (allowance < approval.amount) {
@@ -509,6 +521,8 @@ function splitLegsKey(legs: BorrowLeg[]) {
     .map((leg) =>
       [
         leg.spoke,
+        leg.chainId.toString(),
+        leg.signatureGateway,
         leg.collateralToken,
         leg.collateralReserveId.toString(),
         leg.debtReserveId.toString(),
@@ -517,6 +531,33 @@ function splitLegsKey(legs: BorrowLeg[]) {
       ].join(":")
     )
     .join("|")
+}
+
+function validateBorrowLegTargets(
+  legs: BorrowLeg[],
+  expectedChainId: AppChainId
+) {
+  const gateway = legs[0]?.signatureGateway
+
+  if (
+    !gateway ||
+    !isAddress(gateway) ||
+    gateway.toLowerCase() === zeroAddress
+  ) {
+    throw new Error("SignatureGateway is not available on this chain")
+  }
+
+  if (
+    legs.some(
+      (leg) =>
+        leg.chainId !== expectedChainId ||
+        leg.signatureGateway.toLowerCase() !== gateway.toLowerCase()
+    )
+  ) {
+    throw new Error("All borrow legs must use one chain and SignatureGateway")
+  }
+
+  return gateway
 }
 
 export function isCacheForSignerAndChain(

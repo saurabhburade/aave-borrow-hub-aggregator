@@ -1,6 +1,12 @@
-import { arbitrum, base, mainnet, optimism, polygon } from "wagmi/chains"
+import { avalanche, mainnet } from "wagmi/chains"
 
-export const appChains = [mainnet, base, arbitrum, optimism, polygon] as const
+import type { AppChainId } from "@/configs/chain-ids"
+
+export const appChains = [mainnet, avalanche] as const
+
+export function appChainById(chainId: AppChainId) {
+  return appChains.find((chain) => chain.id === chainId)
+}
 
 export const mainnetRpcUrl =
   process.env.NEXT_PUBLIC_MAINNET_RPC_URL?.trim() ??

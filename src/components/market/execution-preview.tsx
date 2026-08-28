@@ -7,7 +7,6 @@ import {
   SkipForwardIcon,
   XIcon,
 } from "lucide-react"
-import { mainnet } from "viem/chains"
 
 import { Metric, SplitLegMetric } from "@/components/market/health-factor-card"
 import {
@@ -26,6 +25,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { InfoLabel, InfoTooltip } from "@/components/ui/info-tooltip"
+import type { AppChainId } from "@/configs/chain-ids"
+import { appChainById } from "@/configs/chains"
 import { CAPTION_CLASS, MICRO_LABEL_CLASS } from "@/configs/constants"
 import { MARKET_TOOLTIPS } from "@/configs/tooltips"
 import type { BorrowExecutionStage } from "@/hooks/use-borrow-execution"
@@ -57,11 +58,6 @@ const SIGNATURE_ACTIONS: Array<{
     label: "Borrow Asset",
   },
 ]
-const MAINNET_EXPLORER_TX_BASE_URL = mainnet.blockExplorers.default.url.replace(
-  /\/$/,
-  ""
-)
-
 export function RouteExecutionPanel({
   disabled,
   disabledReason,
@@ -112,6 +108,7 @@ export function RouteExecutionPanel({
 
 export function BorrowExecutionModal({
   approvalTxHash,
+  chainId,
   disabled,
   disabledReason,
   error,
@@ -126,6 +123,7 @@ export function BorrowExecutionModal({
   onOpenChange,
 }: {
   approvalTxHash: string | null
+  chainId: AppChainId
   disabled: boolean
   disabledReason: string | null
   error: string | null
@@ -184,13 +182,18 @@ export function BorrowExecutionModal({
 
               {approvalTxHash ? (
                 <TransactionHashRow
+                  chainId={chainId}
                   hash={String(approvalTxHash)}
                   label="Collateral approval"
                 />
               ) : null}
 
               {txHash ? (
-                <TransactionHashRow hash={String(txHash)} label="Transaction" />
+                <TransactionHashRow
+                  chainId={chainId}
+                  hash={String(txHash)}
+                  label="Transaction"
+                />
               ) : null}
 
               <Button
@@ -223,7 +226,18 @@ export function BorrowExecutionModal({
   )
 }
 
-function TransactionHashRow({ hash, label }: { hash: string; label: string }) {
+function TransactionHashRow({
+  chainId,
+  hash,
+  label,
+}: {
+  chainId: AppChainId
+  hash: string
+  label: string
+}) {
+  const chain = appChainById(chainId)
+  const explorerBaseUrl = chain?.blockExplorers?.default.url.replace(/\/$/, "")
+
   return (
     <div className="flex items-center gap-3 rounded-2xl bg-muted/40 px-4 py-3">
       <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-success/10 text-success">
@@ -231,10 +245,10 @@ function TransactionHashRow({ hash, label }: { hash: string; label: string }) {
       </span>
       <span className="h-px min-w-6 flex-1 bg-border" aria-hidden="true" />
       <a
-        href={`${MAINNET_EXPLORER_TX_BASE_URL}/tx/${hash}`}
+        href={`${explorerBaseUrl}/tx/${hash}`}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`${label} transaction ${hash} on Etherscan`}
+        aria-label={`${label} transaction ${hash} on ${chain?.name ?? `chain ${chainId}`} explorer`}
         className="min-w-0 shrink-0 truncate text-sm font-semibold underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
       >
         {shortHash(hash)}

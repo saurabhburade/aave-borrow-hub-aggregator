@@ -75,15 +75,17 @@ export function BorrowCard({
           <Button
             type="button"
             variant="ghost"
-            size="sm"
-            aria-label={`Set default Health Factor target. Current target ${formatHealthFactorTarget(
+            size="icon"
+            aria-label={`Open Health Factor settings. Current target ${formatHealthFactorTarget(
+              healthFactorTarget
+            )}`}
+            title={`Health Factor target: ${formatHealthFactorTarget(
               healthFactorTarget
             )}`}
             onClick={() => setSettingsOpen(true)}
-            className="rounded-full text-xs"
+            className="rounded-full"
           >
-            HF {formatHealthFactorTarget(healthFactorTarget)}
-            <Settings2Icon data-icon="inline-end" />
+            <Settings2Icon aria-hidden="true" />
           </Button>
         </div>
       </CardHeader>

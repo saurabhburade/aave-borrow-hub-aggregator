@@ -1,9 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
 vi.mock("@/configs/abis", () => ({ erc20Abi: [], signatureGatewayAbi: [] }))
-vi.mock("@/configs/contracts", () => ({
-  SIGNATURE_GATEWAY: "0x0000000000000000000000000000000000000000",
-}))
 vi.mock("@/lib/aave/signature-gateway", () => ({
   createBorrowActionKey: vi.fn(),
   encodeSignedBorrowLegs: vi.fn(),

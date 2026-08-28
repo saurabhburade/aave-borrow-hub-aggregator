@@ -8,7 +8,6 @@ import {
 } from "viem"
 
 import { signatureGatewayAbi, spokeAbi } from "@/configs/abis"
-import { SIGNATURE_GATEWAY } from "@/configs/contracts"
 import {
   BORROW_TYPES,
   PM_TYPES,
@@ -18,10 +17,12 @@ import {
 
 export type BorrowLeg = {
   borrowAmount: bigint
+  chainId: number
   collateralAmount: bigint
   collateralToken: Address
   collateralReserveId: bigint
   debtReserveId: bigint
+  signatureGateway: Address
   spoke: Address
 }
 
@@ -106,6 +107,7 @@ async function maybeEncodePositionManagerApproval({
   onSigningStatus,
   publicClient,
   resumeStatus,
+  signatureGateway,
   spoke,
   user,
   walletClient,
@@ -115,6 +117,7 @@ async function maybeEncodePositionManagerApproval({
   onSigningStatus?: (status: BorrowSigningStatus) => void
   publicClient: PublicClient
   resumeStatus?: BorrowSigningStatus["status"]
+  signatureGateway: Address
   spoke: Address
   user: Address
   walletClient: WalletClient
@@ -127,7 +130,7 @@ async function maybeEncodePositionManagerApproval({
     address: spoke,
     abi: spokeAbi,
     functionName: "isPositionManager",
-    args: [user, SIGNATURE_GATEWAY],
+    args: [user, signatureGateway],
   })
 
   if (alreadyApproved) {
@@ -140,7 +143,7 @@ async function maybeEncodePositionManagerApproval({
   }
 
   const registered = await publicClient.readContract({
-    address: SIGNATURE_GATEWAY,
+    address: signatureGateway,
     abi: signatureGatewayAbi,
     functionName: "isSpokeRegistered",
     args: [spoke],
@@ -162,7 +165,7 @@ async function maybeEncodePositionManagerApproval({
     updates: [
       {
         approve: true,
-        positionManager: SIGNATURE_GATEWAY,
+        positionManager: signatureGateway,
       },
     ],
     nonce,
@@ -203,6 +206,7 @@ export async function encodeSignedBorrowLegs({
   onSigningStatus,
   publicClient,
   resumeStatuses,
+  signatureGateway,
   user,
   walletClient,
 }: {
@@ -214,14 +218,15 @@ export async function encodeSignedBorrowLegs({
   onSigningStatus?: (status: BorrowSigningStatus) => void
   publicClient: PublicClient
   resumeStatuses?: BorrowSigningStatus[]
+  signatureGateway: Address
   user: Address
   walletClient: WalletClient
 }) {
   const calls: Hex[] = [...(initialCalls ?? [])]
-  const gatewayDomain = await getEip712Domain(publicClient, SIGNATURE_GATEWAY)
+  const gatewayDomain = await getEip712Domain(publicClient, signatureGateway)
   const actionKey = providedActionKey ?? createBorrowActionKey()
   let nonce = await getNonce({
-    contract: SIGNATURE_GATEWAY,
+    contract: signatureGateway,
     key: actionKey,
     owner: user,
     publicClient,
@@ -240,6 +245,7 @@ export async function encodeSignedBorrowLegs({
       onSigningStatus,
       publicClient,
       resumeStatus: findSigningStatus(resumeStatuses, legIndex, "pm-approval"),
+      signatureGateway,
       spoke: leg.spoke,
       user,
       walletClient,

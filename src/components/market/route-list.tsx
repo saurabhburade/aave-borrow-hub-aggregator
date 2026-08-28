@@ -716,6 +716,7 @@ function RouteHeaderEffectiveApy({ value }: { value: string }) {
     <span className="shrink-0 text-right">
       <InfoLabel
         className={MICRO_LABEL_CLASS}
+        nested
         tooltip={MARKET_TOOLTIPS.effectiveBorrowApy}
         tooltipClassName="mt-px"
       >

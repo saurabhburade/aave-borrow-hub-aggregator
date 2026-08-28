@@ -1,6 +1,6 @@
 # Aave Borrow Hub Aggregator
 
-A Next.js interface for comparing eligible Aave V4 spoke routes and preparing a borrow with the best estimated effective borrow APY. It supports direct and split routes, shows collateral and health-factor impacts, and executes through the SignatureGateway flow.
+A multichain Next.js interface for comparing eligible Aave V4 spoke routes and preparing a borrow with the best estimated effective borrow APY. It supports direct and split routes, shows collateral and health-factor impacts, and executes through the SignatureGateway deployed for the selected chain.
 
 ## Setup
 
@@ -12,6 +12,11 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+The root URL redirects to Ethereum. Market pages use the selected chain ID in
+the URL: `/1` for Ethereum and `/43114` for Avalanche. The header selector
+changes both the market route and, when a wallet is connected, requests the
+corresponding wallet network.
 
 Useful commands:
 
@@ -46,4 +51,8 @@ pnpm typecheck
 pnpm lint
 ```
 
-For changes to borrow execution, connect a wallet on Ethereum mainnet, enter a collateral and borrow amount, inspect the route preview, and verify the wallet’s signature and transaction prompts before submitting.
+For changes to borrow execution, select a chain with a deployed
+SignatureGateway, connect a wallet, enter collateral and borrow amounts,
+inspect the route preview, and verify the wallet's network, signature, and
+transaction prompts before submitting. Ethereum and Avalanche each use the
+SignatureGateway address reported by Aave for that chain.
